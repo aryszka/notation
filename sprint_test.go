@@ -1,7 +1,6 @@
 package notation
 
 import (
-	"reflect"
 	"testing"
 	"unsafe"
 )
@@ -243,8 +242,8 @@ func TestSprintv(t *testing.T) {
 		{"structure", struct{ foo int }{42}, "struct{foo int}{foo: int(42)}"},
 		{"custom structure", myStruct{42}, "myStruct{field: interface{}(int(42))}"},
 		{"custom structure, nil field", myStruct{}, "myStruct{field: interface{}(nil)}"},
-		{"unsafe pointer", unsafe.Pointer(&struct{}{}), "pointer"},
-		{"custom unsafe pointer", myUnsafePointer(&struct{}{}), "pointer"},
+		{"unsafe pointer", unsafe.Pointer(&struct{}{}), "Pointer(pointer)"},
+		{"custom unsafe pointer", myUnsafePointer(&struct{}{}), "myUnsafePointer(pointer)"},
 		{"unsafe pointer type", struct{ p unsafe.Pointer }{}, "struct{p Pointer}{p: Pointer(nil)}"},
 	} {
 		t.Run(test.title, func(t *testing.T) {
@@ -253,12 +252,5 @@ func TestSprintv(t *testing.T) {
 				t.Fatalf("expected: %s, got: %s", test.expect, s)
 			}
 		})
-	}
-}
-
-func TestSprintInvalid(t *testing.T) {
-	s := sprint(none, reflect.Value{})
-	if s != "<invalid>" {
-		t.Fatalf("expected: <invalid>, got: %s", s)
 	}
 }

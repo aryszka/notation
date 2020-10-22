@@ -1,7 +1,11 @@
 package notation
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -16,23 +20,102 @@ const (
 	allTypes
 )
 
-func sprintValues(o opts, v []interface{}) string {
-	s := make([]string, len(v))
-	for i := range v {
-		if v[i] == nil {
-			s[i] = "nil"
+type node struct {
+	len, wlen, wlen0, wlenLast int
+	wrap                       bool
+	parts                      []interface{}
+}
+
+type wrapper struct {
+	sep, suffix string
+	items       []node
+}
+
+func nodeOf(parts ...interface{}) node {
+	return node{parts: parts}
+}
+
+func config(name string, dflt int) int {
+	s := os.Getenv(name)
+	if s == "" {
+		s = os.Getenv(strings.ToLower(name))
+	}
+
+	if s == "" {
+		return dflt
+	}
+
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		return dflt
+	}
+
+	return v
+}
+
+func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
+	tab := config("TABWIDTH", 8)
+	cols0 := config("LINEWIDTH", 80-8)
+	cols1 := config("LINEWIDTH1", (cols0+8)*3/2-8)
+	wr := &writer{w: w}
+	for i, vi := range v {
+		if wr.err != nil {
+			return wr.n, wr.err
+		}
+
+		if i > 0 {
+			if o&wrap == 0 {
+				wr.write(" ")
+			} else {
+				wr.write("\n")
+			}
+		}
+
+		if vi == nil {
+			fprint(wr, 0, nodeOf("nil"))
 			continue
 		}
 
-		s[i] = sprint(o, reflect.ValueOf(v[i]))
+		n := reflectValue(o, reflect.ValueOf(vi))
+		if o&wrap != 0 {
+			n = nodeLen(tab, n)
+			n = wrapNode(tab, cols0, cols1, n)
+		}
+
+		fprint(wr, 0, n)
 	}
 
-	sep := " "
-	if o&wrap != 0 {
-		sep = "\n"
-	}
+	return wr.n, wr.err
+}
 
-	return strings.Join(s, sep)
+func sprintValues(o opts, v []interface{}) string {
+	var b bytes.Buffer
+	fprintValues(&b, o, v)
+	return b.String()
+}
+
+func Fprint(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, none, v)
+}
+
+func Fprintw(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, wrap, v)
+}
+
+func Fprintt(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, types, v)
+}
+
+func Fprintwt(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, wrap|types, v)
+}
+
+func Fprintv(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, allTypes, v)
+}
+
+func Fprintwv(w io.Writer, v ...interface{}) (int, error) {
+	return fprintValues(w, wrap|allTypes, v)
 }
 
 func Sprint(v ...interface{}) string {
