@@ -946,7 +946,13 @@ func TestNonWrapperNodes(t *testing.T) {
 }{}`
 
 	defer withEnv(t, "TABWIDTH=2", "LINEWIDTH=27", "LINEWIDTH1=30")()
-	o := map[struct{foo int; bar int}]struct{foo int; bar int}{}
+	o := map[struct {
+		foo int
+		bar int
+	}]struct {
+		foo int
+		bar int
+	}{}
 	s := Sprintwt(o)
 	if s != expect {
 		t.Fatalf("expected: %s, got: %s", expect, s)
