@@ -1,13 +1,17 @@
 package notation
 
-import (
-	"reflect"
-)
+import "reflect"
 
 func reflectFuncBaseType(t reflect.Type) node {
+	isVariadic := t.IsVariadic()
 	args := func(num func() int, typ func(int) reflect.Type) []node {
 		var t []node
 		for i := 0; i < num(); i++ {
+			if i == num()-1 && isVariadic {
+				t = append(t, nodeOf("...", reflectType(typ(i).Elem())))
+				continue
+			}
+
 			t = append(t, reflectType(typ(i)))
 		}
 
@@ -21,14 +25,14 @@ func reflectFuncBaseType(t reflect.Type) node {
 	if len(in) == 1 {
 		n.parts = append(n.parts, in[0])
 	} else if len(in) > 1 {
-		n.parts = append(n.parts, wrapper{sep: ", ", items: in})
+		n.parts = append(n.parts, wrapper{sep: ", ", suffix: ",", items: in})
 	}
 
 	n.parts = append(n.parts, ")")
 	if len(out) == 1 {
 		n.parts = append(n.parts, " ", out[0])
 	} else if len(out) > 1 {
-		n.parts = append(n.parts, " (", wrapper{sep: ", ", items: out}, ")")
+		n.parts = append(n.parts, " (", wrapper{sep: ", ", suffix: ",", items: out}, ")")
 	}
 
 	return n
@@ -103,7 +107,12 @@ func reflectStructType(t reflect.Type) node {
 
 func reflectType(t reflect.Type) node {
 	if t.Name() != "" {
-		return nodeOf(t.Name())
+		name := t.Name()
+		if name == "uint8" {
+			name = "byte"
+		}
+
+		return nodeOf(name)
 	}
 
 	switch t.Kind() {
@@ -121,9 +130,7 @@ func reflectType(t reflect.Type) node {
 		return reflectPointerType(t)
 	case reflect.Slice:
 		return reflectListType(t)
-	case reflect.Struct:
-		return reflectStructType(t)
 	default:
-		return nodeOf("<invalid>")
+		return reflectStructType(t)
 	}
 }

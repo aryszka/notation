@@ -2,6 +2,7 @@ package notation
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"reflect"
@@ -18,17 +19,63 @@ const (
 	types
 	skipTypes
 	allTypes
+	randomMaps
 )
 
-type node struct {
-	len, wlen, wlen0, wlenLast int
-	wrap                       bool
-	parts                      []interface{}
+type wrapLen struct {
+	first, max, last int
 }
 
+type node struct {
+	len      int
+	wrapLen  wrapLen
+	fullWrap wrapLen
+	wrap     bool
+	parts    []interface{}
+}
+
+type wrapMode int
+
+const (
+	block wrapMode = iota
+	line
+)
+
 type wrapper struct {
-	sep, suffix string
-	items       []node
+	mode         wrapMode
+	sep, suffix  string
+	items        []node
+	lineWrappers []int
+}
+
+type writer struct {
+	w   io.Writer
+	n   int
+	err error
+}
+
+func (n node) String() string {
+	var b bytes.Buffer
+	w := &writer{w: &b}
+	fprint(w, 0, n)
+	return b.String()
+}
+
+func (w *writer) write(o interface{}) {
+	if w.err != nil {
+		return
+	}
+
+	n, err := fmt.Fprint(w.w, o)
+	w.n += n
+	w.err = err
+}
+
+func (w *writer) line(t int) {
+	w.write("\n")
+	for i := 0; i < t; i++ {
+		w.write("\t")
+	}
 }
 
 func nodeOf(parts ...interface{}) node {
@@ -55,8 +102,13 @@ func config(name string, dflt int) int {
 
 func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 	tab := config("TABWIDTH", 8)
-	cols0 := config("LINEWIDTH", 80-8)
-	cols1 := config("LINEWIDTH1", (cols0+8)*3/2-8)
+	cols0 := config("LINEWIDTH", 80-tab)
+	cols1 := config("LINEWIDTH1", (cols0+tab)*3/2-tab)
+	sortMaps := config("MAPSORT", 1)
+	if sortMaps == 0 {
+		o |= randomMaps
+	}
+
 	wr := &writer{w: w}
 	for i, vi := range v {
 		if wr.err != nil {

@@ -46,34 +46,51 @@ func reflectPrimitive(o opts, r reflect.Value, v interface{}, suppressType ...st
 	return nodeOf(tn, "(", s, ")")
 }
 
-func reflectNil(o opts, r reflect.Value) node {
+func reflectNil(o opts, groupUnnamedType bool, r reflect.Value) node {
 	if _, _, a := withType(o); !a {
 		return nodeOf("nil")
 	}
 
-	return nodeOf(reflectType(r.Type()), "(nil)")
+	rt := r.Type()
+	if groupUnnamedType && rt.Name() == "" {
+		return nodeOf("(", reflectType(rt), ")(nil)")
+	}
+
+	return nodeOf(reflectType(rt), "(nil)")
 }
 
 func reflectItems(o opts, prefix string, r reflect.Value) node {
-	items := wrapper{sep: ", ", suffix: ","}
-	itemOpts := o | skipTypes
-	for i := 0; i < r.Len(); i++ {
-		items.items = append(
-			items.items,
-			reflectValue(itemOpts, r.Index(i)),
-		)
+	typ := r.Type()
+	var items wrapper
+	if typ.Elem().Name() == "uint8" {
+		items = wrapper{sep: " ", mode: line}
+		for i := 0; i < r.Len(); i++ {
+			items.items = append(
+				items.items,
+				nodeOf(fmt.Sprintf("%02x", r.Index(i).Uint())),
+			)
+		}
+	} else {
+		items = wrapper{sep: ", ", suffix: ","}
+		itemOpts := o | skipTypes
+		for i := 0; i < r.Len(); i++ {
+			items.items = append(
+				items.items,
+				reflectValue(itemOpts, r.Index(i)),
+			)
+		}
 	}
 
 	if _, t, _ := withType(o); !t {
 		return nodeOf(prefix, "{", items, "}")
 	}
 
-	return nodeOf(reflectType(r.Type()), "{", items, "}")
+	return nodeOf(reflectType(typ), "{", items, "}")
 }
 
 func reflectHidden(o opts, hidden string, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, true, r)
 	}
 
 	if _, t, _ := withType(o); !t {
@@ -97,7 +114,7 @@ func reflectFunc(o opts, r reflect.Value) node {
 
 func reflectInterface(o opts, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, false, r)
 	}
 
 	e := reflectValue(o, r.Elem())
@@ -115,7 +132,7 @@ func reflectInterface(o opts, r reflect.Value) node {
 
 func reflectMap(o opts, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, true, r)
 	}
 
 	var (
@@ -140,7 +157,10 @@ func reflectMap(o opts, r reflect.Value) node {
 		sn[skey] = nk
 	}
 
-	sort.Strings(skeys)
+	if o&randomMaps == 0 {
+		sort.Strings(skeys)
+	}
+
 	for _, skey := range skeys {
 		items.items = append(
 			items.items,
@@ -161,7 +181,7 @@ func reflectMap(o opts, r reflect.Value) node {
 
 func reflectPointer(o opts, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, true, r)
 	}
 
 	e := reflectValue(o, r.Elem())
@@ -174,7 +194,7 @@ func reflectPointer(o opts, r reflect.Value) node {
 
 func reflectList(o opts, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, true, r)
 	}
 
 	return reflectItems(o, "[]", r)
@@ -221,7 +241,7 @@ func reflectString(o opts, r reflect.Value) node {
 }
 
 func reflectStruct(o opts, r reflect.Value) node {
-	wr := wrapper{sep: ", "}
+	wr := wrapper{sep: ", ", suffix: ","}
 
 	fieldOpts := o | skipTypes
 	rt := r.Type()
@@ -249,7 +269,7 @@ func reflectStruct(o opts, r reflect.Value) node {
 
 func reflectUnsafePointer(o opts, r reflect.Value) node {
 	if r.IsNil() {
-		return reflectNil(o, r)
+		return reflectNil(o, false, r)
 	}
 
 	if _, _, a := withType(o); !a {
@@ -298,11 +318,9 @@ func reflectValue(o opts, r reflect.Value) node {
 		return reflectList(o, r)
 	case reflect.String:
 		return reflectString(o, r)
-	case reflect.Struct:
-		return reflectStruct(o, r)
 	case reflect.UnsafePointer:
 		return reflectUnsafePointer(o, r)
 	default:
-		return nodeOf("<invalid>")
+		return reflectStruct(o, r)
 	}
 }
