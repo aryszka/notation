@@ -910,11 +910,13 @@ func TestSortedMap(t *testing.T) {
 }
 
 func TestBytes(t *testing.T) {
-	const expectNotWrapped = `[]{00 01 02 03 04 05 06 07 08 09 0a 0b}`
-	const expectWrapped = `[]{
+	const (
+		expectNotWrapped = `[]{00 01 02 03 04 05 06 07 08 09 0a 0b}`
+		expectWrapped    = `[]{
 	00 01 02 03 04 05
 	06 07 08 09 0a 0b
 }`
+	)
 
 	b := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}
 	t.Run("not wrapped", func(t *testing.T) {
@@ -940,7 +942,10 @@ func TestBytes(t *testing.T) {
 }
 
 func TestNonWrapperNodes(t *testing.T) {
-	const expect = `map[struct{foo int; bar int}]struct{
+	const expect = `map[struct{
+	foo int
+	bar int
+}]struct{
 	foo int
 	bar int
 }{}`

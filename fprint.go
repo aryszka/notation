@@ -115,23 +115,38 @@ func wrapNode(t, c0, c1 int, n node) node {
 
 	n.wrap = true
 	cc0, cc1 := c0, c1
-	for i, p := range n.parts {
+	lastWrapperIndex := -1
+	var trackBack bool
+	for i := 0; i < len(n.parts); i++ {
+		p := n.parts[i]
 		switch part := p.(type) {
 		case node:
 			part = wrapNode(t, cc0, cc1, part)
 			n.parts[i] = part
 			if part.wrap {
-				cc0 -= part.wrapLen.last
-				cc1 -= part.wrapLen.last
+				// This is an approximation: sometimes part.fullWrap.first is applied here,
+				// but usually those are the same.
+				cc0 -= part.wrapLen.first
+				cc1 -= part.wrapLen.first
 			} else {
 				cc0 -= part.len
 				cc1 -= part.len
 			}
+
+			if !trackBack && cc1 < 0 {
+				cc0 = 0
+				cc1 = 0
+				i = lastWrapperIndex
+				trackBack = true
+			}
 		case wrapper:
-			if len(part.items) > 0 {
-				cc0, cc1 = c0, c1
+			if len(part.items) == 0 {
+				continue
 			}
 
+			cc0, cc1 = c0, c1
+			trackBack = false
+			lastWrapperIndex = i
 			switch part.mode {
 			case line:
 				c0, c1 = c0-t, c1-t
