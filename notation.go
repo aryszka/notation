@@ -26,6 +26,20 @@ type wrapLen struct {
 	first, max, last int
 }
 
+type valueKey struct {
+	typ reflect.Type
+	ptr uintptr
+}
+
+type nodeRef struct {
+	id, refCount int
+}
+
+type pending struct {
+	values    map[valueKey]nodeRef
+	idCounter int
+}
+
 type node struct {
 	len      int
 	wrapLen  wrapLen
@@ -151,7 +165,12 @@ func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 			continue
 		}
 
-		n := reflectValue(o, reflect.ValueOf(vi))
+		n := reflectValue(
+			o,
+			&pending{values: make(map[valueKey]nodeRef)},
+			reflect.ValueOf(vi),
+		)
+
 		if o&wrap != 0 {
 			n = nodeLen(tab, n)
 			n = wrapNode(tab, cols0, cols0, cols1, n)

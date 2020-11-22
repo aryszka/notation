@@ -1001,3 +1001,78 @@ func TestSingleLongString(t *testing.T) {
 		}
 	})
 }
+
+func TestCyclicReferences(t *testing.T) {
+	t.Run("slice", func(t *testing.T) {
+		const expect = `r0=[]{r0}`
+		l := []interface{}{"foo"}
+		l[0] = l
+		s := Sprint(l)
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("map", func(t *testing.T) {
+		const expect = `r0=map{"foo": r0}`
+		m := map[string]interface{}{"foo": "bar"}
+		m["foo"] = m
+		s := Sprint(m)
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("pointer", func(t *testing.T) {
+		const expect = `r0=r0`
+		p := new(interface{})
+		*p = p
+		s := Sprint(p)
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("multiple refs", func(t *testing.T) {
+		const expect = `{f0: r1={f0: r2={f0: nil, f1: r1, f2: r2}, f1: nil, f2: nil}, f1: nil, f2: nil}`
+		type typ struct{ f0, f1, f2 *typ }
+		v0 := new(typ)
+		v1 := new(typ)
+		v2 := new(typ)
+		v0.f0 = v1
+		v1.f0 = v2
+		v2.f1 = v1
+		v2.f2 = v2
+		s := Sprintw(v0)
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("multiple refs, different subtrees", func(t *testing.T) {
+		const expect = `{
+	f0: r1={f0: r2={f0: nil, f1: r1, f2: r2}, f1: nil, f2: nil},
+	f1: r3={f0: r4={f0: nil, f1: r3, f2: r4}, f1: nil, f2: nil},
+	f2: nil,
+}`
+
+		type typ struct{ f0, f1, f2 *typ }
+		v0 := new(typ)
+		v11 := new(typ)
+		v12 := new(typ)
+		v21 := new(typ)
+		v22 := new(typ)
+		v0.f0 = v11
+		v11.f0 = v12
+		v12.f1 = v11
+		v12.f2 = v12
+		v0.f1 = v21
+		v21.f0 = v22
+		v22.f1 = v21
+		v22.f2 = v22
+		s := Sprintw(v0)
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+}

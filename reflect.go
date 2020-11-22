@@ -60,7 +60,7 @@ func reflectNil(o opts, groupUnnamedType bool, r reflect.Value) node {
 	return nodeOf(reflectType(rt), "(nil)")
 }
 
-func reflectItems(o opts, prefix string, r reflect.Value) node {
+func reflectItems(o opts, p *pending, prefix string, r reflect.Value) node {
 	typ := r.Type()
 	var items wrapper
 	if typ.Elem().Name() == "uint8" {
@@ -77,7 +77,7 @@ func reflectItems(o opts, prefix string, r reflect.Value) node {
 		for i := 0; i < r.Len(); i++ {
 			items.items = append(
 				items.items,
-				reflectValue(itemOpts, r.Index(i)),
+				reflectValue(itemOpts, p, r.Index(i)),
 			)
 		}
 	}
@@ -101,8 +101,8 @@ func reflectHidden(o opts, hidden string, r reflect.Value) node {
 	return reflectType(r.Type())
 }
 
-func reflectArray(o opts, r reflect.Value) node {
-	return reflectItems(o, fmt.Sprintf("[%d]", r.Len()), r)
+func reflectArray(o opts, p *pending, r reflect.Value) node {
+	return reflectItems(o, p, fmt.Sprintf("[%d]", r.Len()), r)
 }
 
 func reflectChan(o opts, r reflect.Value) node {
@@ -113,12 +113,12 @@ func reflectFunc(o opts, r reflect.Value) node {
 	return reflectHidden(o, "func()", r)
 }
 
-func reflectInterface(o opts, r reflect.Value) node {
+func reflectInterface(o opts, p *pending, r reflect.Value) node {
 	if r.IsNil() {
 		return reflectNil(o, false, r)
 	}
 
-	e := reflectValue(o, r.Elem())
+	e := reflectValue(o, p, r.Elem())
 	if _, t, _ := withType(o); !t {
 		return e
 	}
@@ -131,7 +131,7 @@ func reflectInterface(o opts, r reflect.Value) node {
 	)
 }
 
-func reflectMap(o opts, r reflect.Value) node {
+func reflectMap(o opts, p *pending, r reflect.Value) node {
 	if r.IsNil() {
 		return reflectNil(o, true, r)
 	}
@@ -149,7 +149,7 @@ func reflectMap(o opts, r reflect.Value) node {
 	sn := make(map[string]node)
 	for _, key := range keys {
 		var b bytes.Buffer
-		nk := reflectValue(itemOpts, key)
+		nk := reflectValue(itemOpts, p, key)
 		nkeys = append(nkeys, nk)
 		wr := writer{w: &b}
 		fprint(&wr, 0, nk)
@@ -169,7 +169,7 @@ func reflectMap(o opts, r reflect.Value) node {
 			nodeOf(
 				sn[skey],
 				": ",
-				reflectValue(itemOpts, r.MapIndex(sv[skey])),
+				reflectValue(itemOpts, p, r.MapIndex(sv[skey])),
 			),
 		)
 	}
@@ -181,12 +181,12 @@ func reflectMap(o opts, r reflect.Value) node {
 	return nodeOf(reflectType(r.Type()), "{", items, "}")
 }
 
-func reflectPointer(o opts, r reflect.Value) node {
+func reflectPointer(o opts, p *pending, r reflect.Value) node {
 	if r.IsNil() {
 		return reflectNil(o, true, r)
 	}
 
-	e := reflectValue(o, r.Elem())
+	e := reflectValue(o, p, r.Elem())
 	if _, t, _ := withType(o); !t {
 		return e
 	}
@@ -194,12 +194,12 @@ func reflectPointer(o opts, r reflect.Value) node {
 	return nodeOf("*", e)
 }
 
-func reflectList(o opts, r reflect.Value) node {
+func reflectList(o opts, p *pending, r reflect.Value) node {
 	if r.IsNil() {
 		return reflectNil(o, true, r)
 	}
 
-	return reflectItems(o, "[]", r)
+	return reflectItems(o, p, "[]", r)
 }
 
 func reflectString(o opts, r reflect.Value) node {
@@ -248,7 +248,7 @@ func reflectString(o opts, r reflect.Value) node {
 	return nodeOf(tn, "(", wrapper{items: []node{n}}, ")")
 }
 
-func reflectStruct(o opts, r reflect.Value) node {
+func reflectStruct(o opts, p *pending, r reflect.Value) node {
 	wr := wrapper{sep: ", ", suffix: ","}
 
 	fieldOpts := o | skipTypes
@@ -262,6 +262,7 @@ func reflectStruct(o opts, r reflect.Value) node {
 				": ",
 				reflectValue(
 					fieldOpts,
+					p,
 					r.FieldByName(name),
 				),
 			),
@@ -287,17 +288,64 @@ func reflectUnsafePointer(o opts, r reflect.Value) node {
 	return nodeOf(reflectType(r.Type()), "(pointer)")
 }
 
-func reflectValue(o opts, r reflect.Value) node {
+func checkPending(p *pending, r reflect.Value) (applyRef func(node) node, ref node, isPending bool) {
+	applyRef = func(n node) node { return n }
+	switch r.Kind() {
+	case reflect.Slice, reflect.Map:
+	case reflect.Ptr:
+		if r.IsNil() {
+			return
+		}
+	default:
+		return
+	}
+
+	var nr nodeRef
+	key := valueKey{typ: r.Type(), ptr: r.Pointer()}
+	nr, isPending = p.values[key]
+	if isPending {
+		nr.refCount++
+		p.values[key] = nr
+		ref = nodeOf("r", nr.id)
+		return
+	}
+
+	nr = nodeRef{id: p.idCounter}
+	p.idCounter++
+	p.values[key] = nr
+	applyRef = func(n node) node {
+		nr = p.values[key]
+		if nr.refCount > 0 {
+			n.parts = append(
+				[]interface{}{"r", nr.id, "="},
+				n.parts...,
+			)
+		}
+
+		delete(p.values, key)
+		return n
+	}
+
+	return
+}
+
+func reflectValue(o opts, p *pending, r reflect.Value) node {
+	applyRef, ref, isPending := checkPending(p, r)
+	if isPending {
+		return ref
+	}
+
+	var n node
 	switch r.Kind() {
 	case reflect.Bool:
-		return reflectPrimitive(o, r, r.Bool(), "bool")
+		n = reflectPrimitive(o, r, r.Bool(), "bool")
 	case
 		reflect.Int,
 		reflect.Int8,
 		reflect.Int16,
 		reflect.Int32,
 		reflect.Int64:
-		return reflectPrimitive(o, r, r.Int(), "int")
+		n = reflectPrimitive(o, r, r.Int(), "int")
 	case
 		reflect.Uint,
 		reflect.Uint8,
@@ -305,30 +353,32 @@ func reflectValue(o opts, r reflect.Value) node {
 		reflect.Uint32,
 		reflect.Uint64,
 		reflect.Uintptr:
-		return reflectPrimitive(o, r, r.Uint())
+		n = reflectPrimitive(o, r, r.Uint())
 	case reflect.Float32, reflect.Float64:
-		return reflectPrimitive(o, r, r.Float())
+		n = reflectPrimitive(o, r, r.Float())
 	case reflect.Complex64, reflect.Complex128:
-		return reflectPrimitive(o, r, r.Complex())
+		n = reflectPrimitive(o, r, r.Complex())
 	case reflect.Array:
-		return reflectArray(o, r)
+		n = reflectArray(o, p, r)
 	case reflect.Chan:
-		return reflectChan(o, r)
+		n = reflectChan(o, r)
 	case reflect.Func:
-		return reflectFunc(o, r)
+		n = reflectFunc(o, r)
 	case reflect.Interface:
-		return reflectInterface(o, r)
+		n = reflectInterface(o, p, r)
 	case reflect.Map:
-		return reflectMap(o, r)
+		n = reflectMap(o, p, r)
 	case reflect.Ptr:
-		return reflectPointer(o, r)
+		n = reflectPointer(o, p, r)
 	case reflect.Slice:
-		return reflectList(o, r)
+		n = reflectList(o, p, r)
 	case reflect.String:
-		return reflectString(o, r)
+		n = reflectString(o, r)
 	case reflect.UnsafePointer:
-		return reflectUnsafePointer(o, r)
+		n = reflectUnsafePointer(o, r)
 	default:
-		return reflectStruct(o, r)
+		n = reflectStruct(o, p, r)
 	}
+
+	return applyRef(n)
 }
