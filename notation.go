@@ -34,6 +34,13 @@ type node struct {
 	parts    []interface{}
 }
 
+type str struct {
+	val    string
+	raw    string
+	useRaw bool
+	rawLen wrapLen
+}
+
 type wrapMode int
 
 const (
@@ -42,10 +49,10 @@ const (
 )
 
 type wrapper struct {
-	mode         wrapMode
-	sep, suffix  string
-	items        []node
-	lineWrappers []int
+	mode        wrapMode
+	sep, suffix string
+	items       []node
+	lineEnds    []int
 }
 
 type writer struct {
@@ -61,6 +68,14 @@ func (n node) String() string {
 	return b.String()
 }
 
+func (s str) String() string {
+	if s.useRaw {
+		return s.raw
+	}
+
+	return s.val
+}
+
 func (w *writer) write(o interface{}) {
 	if w.err != nil {
 		return
@@ -71,11 +86,19 @@ func (w *writer) write(o interface{}) {
 	w.err = err
 }
 
-func (w *writer) line(t int) {
+func (w *writer) blankLine() {
 	w.write("\n")
-	for i := 0; i < t; i++ {
+}
+
+func (w *writer) tabs(n int) {
+	for i := 0; i < n; i++ {
 		w.write("\t")
 	}
+}
+
+func (w *writer) line(t int) {
+	w.blankLine()
+	w.tabs(t)
 }
 
 func nodeOf(parts ...interface{}) node {
@@ -131,7 +154,7 @@ func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 		n := reflectValue(o, reflect.ValueOf(vi))
 		if o&wrap != 0 {
 			n = nodeLen(tab, n)
-			n = wrapNode(tab, cols0, cols1, n)
+			n = wrapNode(tab, cols0, cols0, cols1, n)
 		}
 
 		fprint(wr, 0, n)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 )
 
 func withType(o opts) (opts, bool, bool) {
@@ -140,6 +141,7 @@ func reflectMap(o opts, r reflect.Value) node {
 		skeys []string
 	)
 
+	// TODO: simplify this when no sorting is required
 	items := wrapper{sep: ", ", suffix: ","}
 	itemOpts := o | skipTypes
 	keys := r.MapKeys()
@@ -201,7 +203,8 @@ func reflectList(o opts, r reflect.Value) node {
 }
 
 func reflectString(o opts, r reflect.Value) node {
-	b := []byte(r.String())
+	sv := r.String()
+	b := []byte(sv)
 	e := make([]byte, 0, len(b))
 	for _, c := range b {
 		switch c {
@@ -226,18 +229,23 @@ func reflectString(o opts, r reflect.Value) node {
 		}
 	}
 
-	s := fmt.Sprintf("\"%s\"", string(e))
+	s := str{val: fmt.Sprintf("\"%s\"", string(e))}
+	if !strings.Contains(sv, "`") && strings.Contains(sv, "\n") {
+		s.raw = fmt.Sprintf("`%s`", sv)
+	}
+
+	n := nodeOf(s)
 	_, t, a := withType(o)
 	if !t {
-		return nodeOf(s)
+		return n
 	}
 
 	tn := reflectType(r.Type())
 	if !a && tn.parts[0] == "string" {
-		return nodeOf(s)
+		return n
 	}
 
-	return nodeOf(tn, "(", wrapper{items: []node{nodeOf(s)}}, ")")
+	return nodeOf(tn, "(", wrapper{items: []node{n}}, ")")
 }
 
 func reflectStruct(o opts, r reflect.Value) node {

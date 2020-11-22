@@ -1,5 +1,7 @@
 package notation
 
+import "strings"
+
 func unwrappable(n node) bool {
 	return n.len == n.wrapLen.max &&
 		n.len == n.fullWrap.max
@@ -29,6 +31,36 @@ func nodeLen(t int, n node) node {
 			n.len += len(part)
 			w += len(part)
 			f += len(part)
+		case str:
+			// We assume here that an str is always contained by a node that has only a
+			// single str.
+			//
+			// If this changes in the future, then we need to provide tests for the
+			// additional cases. If this doesn't change anytime soon, then we can
+			// refactor this part.
+			//
+			n.len = len(part.val)
+			if part.raw == "" {
+				w = len(part.val)
+				f = len(part.val)
+			} else {
+				lines := strings.Split(part.raw, "\n")
+				part.rawLen.first = len(lines[0])
+				for _, line := range lines {
+					if len(line) > part.rawLen.max {
+						part.rawLen.max = len(line)
+					}
+				}
+
+				part.rawLen.last = len(lines[len(lines)-1])
+				n.parts[i] = part
+				n.wrapLen.first = part.rawLen.first
+				n.fullWrap.first = part.rawLen.first
+				n.wrapLen.max = part.rawLen.max
+				n.fullWrap.max = part.rawLen.max
+				w = part.rawLen.last
+				f = part.rawLen.last
+			}
 		case node:
 			part = nodeLen(t, part)
 			n.parts[i] = part
@@ -100,7 +132,7 @@ func nodeLen(t int, n node) node {
 	return n
 }
 
-func wrapNode(t, c0, c1 int, n node) node {
+func wrapNode(t, cf0, c0, c1 int, n node) node {
 	if n.len <= c0 {
 		return n
 	}
@@ -120,12 +152,32 @@ func wrapNode(t, c0, c1 int, n node) node {
 	for i := 0; i < len(n.parts); i++ {
 		p := n.parts[i]
 		switch part := p.(type) {
+		case string:
+			cc0 -= len(part)
+			cc1 -= len(part)
+			if !trackBack && cc1 < 0 {
+				cc0 = 0
+				cc1 = 0
+				i = lastWrapperIndex
+				trackBack = true
+			}
+		case str:
+			// We assume here that an str is always contained by a node that has only a
+			// single str. Therefore we don't need to trackback to here, because the
+			// decision on wrapping was already made for the node.
+			//
+			// If this changes in the future, then we need to provide tests for the
+			// additional cases. If this doesn't change anytime soon, then we can
+			// refactor this part.
+			//
+			part.useRaw = part.raw != ""
+			n.parts[i] = part
 		case node:
-			part = wrapNode(t, cc0, cc1, part)
+			part = wrapNode(t, cf0, cc0, cc1, part)
 			n.parts[i] = part
 			if part.wrap {
-				// This is an approximation: sometimes part.fullWrap.first is applied here,
-				// but usually those are the same.
+				// This is an approximation: sometimes part.fullWrap.first should be applied
+				// here, but usually those are the same.
 				cc0 -= part.wrapLen.first
 				cc1 -= part.wrapLen.first
 			} else {
@@ -149,13 +201,13 @@ func wrapNode(t, c0, c1 int, n node) node {
 			lastWrapperIndex = i
 			switch part.mode {
 			case line:
-				c0, c1 = c0-t, c1-t
+				cl := cf0 - t
 				var w int
 				for j, ni := range part.items {
-					if w > 0 && w+len(part.sep)+ni.len > c0 {
+					if w > 0 && w+len(part.sep)+ni.len > cl {
 						w = 0
-						part.lineWrappers = append(
-							part.lineWrappers,
+						part.lineEnds = append(
+							part.lineEnds,
 							j,
 						)
 					}
@@ -167,12 +219,13 @@ func wrapNode(t, c0, c1 int, n node) node {
 					w += ni.len
 				}
 
+				part.lineEnds = append(part.lineEnds, len(part.items))
 				n.parts[i] = part
-				c0, c1 = c0+t, c1+t
 			default:
 				for j := range part.items {
 					part.items[j] = wrapNode(
 						t,
+						cf0,
 						c0-t,
 						c1-t,
 						part.items[j],
@@ -201,48 +254,50 @@ func fprint(w *writer, t int, n node) {
 
 			if !n.wrap {
 				for i, ni := range part.items {
-					fprint(w, t, ni)
-					if i < len(part.items)-1 {
+					if i > 0 {
 						w.write(part.sep)
 					}
+
+					fprint(w, t, ni)
 				}
 
 				continue
 			}
 
-			t++
 			switch part.mode {
 			case line:
 				var (
-					wi          int
-					lineStarted bool
+					lines [][]node
+					last  int
 				)
 
-				w.line(t)
-				for i, ni := range part.items {
-					if len(part.lineWrappers) > wi &&
-						i == part.lineWrappers[wi] {
-						wi++
-						w.line(t)
-						lineStarted = false
-					}
+				for _, i := range part.lineEnds {
+					lines = append(lines, part.items[last:i])
+					last = i
+				}
 
-					if lineStarted {
-						w.write(part.sep)
-					}
+				for _, line := range lines {
+					w.blankLine()
+					w.tabs(1)
+					for i, ni := range line {
+						if i > 0 {
+							w.write(part.sep)
+						}
 
-					fprint(w, 0, ni)
-					lineStarted = true
+						fprint(w, 0, ni)
+					}
 				}
 			default:
+				t++
 				for _, ni := range part.items {
 					w.line(t)
 					fprint(w, t, ni)
 					w.write(part.suffix)
 				}
+
+				t--
 			}
 
-			t--
 			w.line(t)
 		default:
 			w.write(part)

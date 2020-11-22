@@ -110,12 +110,12 @@ func TestFprint(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-
 		if b.String() != expect {
 			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
+		}
+
+		if n != len(expect) {
+			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
 		}
 	})
 

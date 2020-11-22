@@ -126,8 +126,8 @@ func defaultSet() tests {
 		{"nil custom list", struct{ l myList }{}, "{l: nil}"},
 		{"long item", []string{"foobarbazqux"}, "[]{\"foobarbazqux\"}"},
 		{"long subitem", []struct{ foo string }{{foo: "foobarbazqux"}}, "[]{{foo: \"foobarbazqux\"}}"},
-		{"string", "\\\"\b\f\n\r\t\vfoo", "\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\""},
-		{"custom string", myString("\\\"\b\f\n\r\t\vfoo"), "\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\""},
+		{"string", "\\\"\b\f\r\t\vfoo", "\"\\\\\\\"\\b\\f\\r\\t\\vfoo\""},
+		{"custom string", myString("\\\"\b\f\r\t\vfoo"), "\"\\\\\\\"\\b\\f\\r\\t\\vfoo\""},
 		{"structure", struct{ foo int }{42}, "{foo: 42}"},
 		{"custom structure", myStruct{42}, "{field: 42}"},
 		{"unsafe pointer", unsafe.Pointer(&struct{}{}), "pointer"},
@@ -178,7 +178,7 @@ func (t tests) expectTypes() tests {
 		"nil custom list":                    "struct{l myList}{l: nil}",
 		"long item":                          "[]string{\"foobarbazqux\"}",
 		"long subitem":                       "[]struct{foo string}{{foo: \"foobarbazqux\"}}",
-		"custom string":                      "myString(\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\")",
+		"custom string":                      "myString(\"\\\\\\\"\\b\\f\\r\\t\\vfoo\")",
 		"structure":                          "struct{foo int}{foo: 42}",
 		"custom structure":                   "myStruct{field: 42}",
 		"unsafe pointer type":                "struct{p Pointer}{p: nil}",
@@ -214,7 +214,7 @@ func (t tests) expectVerboseTypes() tests {
 		"nil custom list":                    "struct{l myList}{l: myList(nil)}",
 		"long item":                          "[]string{string(\"foobarbazqux\")}",
 		"long subitem":                       "[]struct{foo string}{struct{foo string}{foo: string(\"foobarbazqux\")}}",
-		"string":                             "string(\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\")",
+		"string":                             "string(\"\\\\\\\"\\b\\f\\r\\t\\vfoo\")",
 		"structure":                          "struct{foo int}{foo: int(42)}",
 		"custom structure":                   "myStruct{field: interface{}(int(42))}",
 		"unsafe pointer":                     "Pointer(pointer)",
@@ -433,7 +433,7 @@ func (t tests) expectWrapAllWithTypes() tests {
 		foo: "foobarbazqux",
 	},
 }`,
-		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\"\n)",
+		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\r\\t\\vfoo\"\n)",
 		"structure": `struct{
 	foo int
 }{
@@ -474,7 +474,16 @@ func (t tests) expectOnlyLongWrappedWithTypes() tests {
 }{
 	i: nil,
 }`,
-		"nil map": `struct{m map[int]int}{
+		"function with multiple return args": `func(
+	int,
+	int,
+) (
+	int,
+	int,
+)`,
+		"nil map": `struct{
+	m map[int]int
+}{
 	m: nil,
 }`,
 		"nil custom map": `struct{m myMap}{
@@ -498,7 +507,7 @@ func (t tests) expectOnlyLongWrappedWithTypes() tests {
 		"long subitem": `[]struct{foo string}{
 	{foo: "foobarbazqux"},
 }`,
-		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\"\n)",
+		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\r\\t\\vfoo\"\n)",
 		"structure": `struct{foo int}{
 	foo: 42,
 }`,
@@ -630,8 +639,8 @@ func (t tests) expectWrapAllWithVerboseTypes() tests {
 		),
 	},
 }`,
-		"string":        "string(\n\t\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\"\n)",
-		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\n\\r\\t\\vfoo\"\n)",
+		"string":        "string(\n\t\"\\\\\\\"\\b\\f\\r\\t\\vfoo\"\n)",
+		"custom string": "myString(\n\t\"\\\\\\\"\\b\\f\\r\\t\\vfoo\"\n)",
 		"structure": `struct{
 	foo int
 }{
@@ -941,7 +950,7 @@ func TestBytes(t *testing.T) {
 	})
 }
 
-func TestNonWrapperNodes(t *testing.T) {
+func TestLongNonWrapperNodes(t *testing.T) {
 	const expect = `map[struct{
 	foo int
 	bar int
@@ -962,4 +971,33 @@ func TestNonWrapperNodes(t *testing.T) {
 	if s != expect {
 		t.Fatalf("expected: %s, got: %s", expect, s)
 	}
+}
+
+func TestSingleLongString(t *testing.T) {
+	t.Run("no line breaks", func(t *testing.T) {
+		const expect = `"foobarbazquxquuxquzquuz"`
+		defer withEnv(t, "TABWIDTH=2", "LINEWIDTH=9", "LINEWIDTH1=12")()
+		s := Sprintwt("foobarbazquxquuxquzquuz")
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("line break and backquote", func(t *testing.T) {
+		const expect = "\"foobarbazqux`\\nquuxquzquuz\""
+		defer withEnv(t, "TABWIDTH=2", "LINEWIDTH=9", "LINEWIDTH1=12")()
+		s := Sprintwt("foobarbazqux`\nquuxquzquuz")
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
+
+	t.Run("line break and no backquote", func(t *testing.T) {
+		const expect = "`foobarbazqux\nquuxquzquuz`"
+		defer withEnv(t, "TABWIDTH=2", "LINEWIDTH=9", "LINEWIDTH1=12")()
+		s := Sprintwt("foobarbazqux\nquuxquzquuz")
+		if s != expect {
+			t.Fatalf("expected: %s, got: %s", expect, s)
+		}
+	})
 }
