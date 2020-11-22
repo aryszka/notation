@@ -9,7 +9,7 @@ import (
 func TestDebugNode(t *testing.T) {
 	const expect = `"foobarbaz"`
 	o := "foobarbaz"
-	n := reflectValue(none, &pending{values: make(map[valueKey]nodeRef)}, reflect.ValueOf(o))
+	n := reflectValue(none, &pending{values: make(map[uintptr]nodeRef)}, reflect.ValueOf(o))
 	s := fmt.Sprint(n)
 	if s != expect {
 		t.Fatalf(

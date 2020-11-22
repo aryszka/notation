@@ -1076,3 +1076,12 @@ func TestCyclicReferences(t *testing.T) {
 		}
 	})
 }
+
+func TestInterfaceType(t *testing.T) {
+	const expect = `struct{foo interface{}}{foo: *struct{bar int}{bar: 42}}`
+	o := struct{ foo interface{} }{foo: &struct{ bar int }{42}}
+	s := Sprintt(o)
+	if s != expect {
+		t.Fatalf("expected: %s, got: %s", expect, s)
+	}
+}

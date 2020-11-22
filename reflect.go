@@ -118,7 +118,7 @@ func reflectInterface(o opts, p *pending, r reflect.Value) node {
 		return reflectNil(o, false, r)
 	}
 
-	e := reflectValue(o, p, r.Elem())
+	e := reflectValue(o&^skipTypes, p, r.Elem())
 	if _, t, _ := withType(o); !t {
 		return e
 	}
@@ -169,7 +169,11 @@ func reflectMap(o opts, p *pending, r reflect.Value) node {
 			nodeOf(
 				sn[skey],
 				": ",
-				reflectValue(itemOpts, p, r.MapIndex(sv[skey])),
+				reflectValue(
+					itemOpts,
+					p,
+					r.MapIndex(sv[skey]),
+				),
 			),
 		)
 	}
@@ -301,7 +305,7 @@ func checkPending(p *pending, r reflect.Value) (applyRef func(node) node, ref no
 	}
 
 	var nr nodeRef
-	key := valueKey{typ: r.Type(), ptr: r.Pointer()}
+	key := r.Pointer()
 	nr, isPending = p.values[key]
 	if isPending {
 		nr.refCount++

@@ -26,17 +26,12 @@ type wrapLen struct {
 	first, max, last int
 }
 
-type valueKey struct {
-	typ reflect.Type
-	ptr uintptr
-}
-
 type nodeRef struct {
 	id, refCount int
 }
 
 type pending struct {
-	values    map[valueKey]nodeRef
+	values    map[uintptr]nodeRef
 	idCounter int
 }
 
@@ -74,6 +69,8 @@ type writer struct {
 	n   int
 	err error
 }
+
+var stderr io.Writer = os.Stderr
 
 func (n node) String() string {
 	var b bytes.Buffer
@@ -167,7 +164,7 @@ func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 
 		n := reflectValue(
 			o,
-			&pending{values: make(map[valueKey]nodeRef)},
+			&pending{values: make(map[uintptr]nodeRef)},
 			reflect.ValueOf(vi),
 		)
 
@@ -180,6 +177,20 @@ func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 	}
 
 	return wr.n, wr.err
+}
+
+func printValues(o opts, v []interface{}) (int, error) {
+	return fprintValues(stderr, o, v)
+}
+
+func printlnValues(o opts, v []interface{}) (int, error) {
+	n, err := fprintValues(stderr, o, v)
+	if err != nil {
+		return n, err
+	}
+
+	nn, err := stderr.Write([]byte("\n"))
+	return n + nn, err
 }
 
 func sprintValues(o opts, v []interface{}) string {
@@ -210,6 +221,54 @@ func Fprintv(w io.Writer, v ...interface{}) (int, error) {
 
 func Fprintwv(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap|allTypes, v)
+}
+
+func Print(v ...interface{}) (int, error) {
+	return printValues(none, v)
+}
+
+func Printw(v ...interface{}) (int, error) {
+	return printValues(wrap, v)
+}
+
+func Printt(v ...interface{}) (int, error) {
+	return printValues(types, v)
+}
+
+func Printwt(v ...interface{}) (int, error) {
+	return printValues(wrap|types, v)
+}
+
+func Printv(v ...interface{}) (int, error) {
+	return printValues(allTypes, v)
+}
+
+func Printwv(v ...interface{}) (int, error) {
+	return printValues(wrap|allTypes, v)
+}
+
+func Println(v ...interface{}) (int, error) {
+	return printlnValues(none, v)
+}
+
+func Printlnw(v ...interface{}) (int, error) {
+	return printlnValues(wrap, v)
+}
+
+func Printlnt(v ...interface{}) (int, error) {
+	return printlnValues(types, v)
+}
+
+func Printlnwt(v ...interface{}) (int, error) {
+	return printlnValues(wrap|types, v)
+}
+
+func Printlnv(v ...interface{}) (int, error) {
+	return printlnValues(allTypes, v)
+}
+
+func Printlnwv(v ...interface{}) (int, error) {
+	return printlnValues(wrap|allTypes, v)
 }
 
 func Sprint(v ...interface{}) string {
