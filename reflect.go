@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -136,12 +137,7 @@ func reflectMap(o opts, p *pending, r reflect.Value) node {
 		return reflectNil(o, true, r)
 	}
 
-	var (
-		nkeys []node
-		skeys []string
-	)
-
-	// TODO: simplify this when no sorting is required
+	var skeys []string
 	items := wrapper{sep: ", ", suffix: ","}
 	itemOpts := o | skipTypes
 	keys := r.MapKeys()
@@ -150,7 +146,6 @@ func reflectMap(o opts, p *pending, r reflect.Value) node {
 	for _, key := range keys {
 		var b bytes.Buffer
 		nk := reflectValue(itemOpts, p, key)
-		nkeys = append(nkeys, nk)
 		wr := writer{w: &b}
 		fprint(&wr, 0, nk)
 		skey := b.String()
@@ -208,32 +203,7 @@ func reflectList(o opts, p *pending, r reflect.Value) node {
 
 func reflectString(o opts, r reflect.Value) node {
 	sv := r.String()
-	b := []byte(sv)
-	e := make([]byte, 0, len(b))
-	for _, c := range b {
-		switch c {
-		case '\\':
-			e = append(e, '\\', '\\')
-		case '"':
-			e = append(e, '\\', '"')
-		case '\b':
-			e = append(e, '\\', 'b')
-		case '\f':
-			e = append(e, '\\', 'f')
-		case '\n':
-			e = append(e, '\\', 'n')
-		case '\r':
-			e = append(e, '\\', 'r')
-		case '\t':
-			e = append(e, '\\', 't')
-		case '\v':
-			e = append(e, '\\', 'v')
-		default:
-			e = append(e, c)
-		}
-	}
-
-	s := str{val: fmt.Sprintf("\"%s\"", string(e))}
+	s := str{val: strconv.Quote(sv)}
 	if !strings.Contains(sv, "`") && strings.Contains(sv, "\n") {
 		s.raw = fmt.Sprintf("`%s`", sv)
 	}

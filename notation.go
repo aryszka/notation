@@ -1,3 +1,7 @@
+/*
+Package notation can be used to print (or sprint) Go objects with optional wrapping (pretty printing) and
+optional type information.
+*/
 package notation
 
 import (
@@ -199,98 +203,148 @@ func sprintValues(o opts, v []interface{}) string {
 	return b.String()
 }
 
+// Fprint prints the provided objects to the provided writer. When multiple objects are printed, they'll be
+// separated by a space.
 func Fprint(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, none, v)
 }
 
+// Fprintw prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary.
+// When multiple objects are printed, they'll be separated by a newline.
 func Fprintw(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap, v)
 }
 
+// Fprintt prints the provided objects to the provided writer with moderate type information. When multiple
+// objects are printed, they'll be separated by a space.
 func Fprintt(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, types, v)
 }
 
+// Fprintwt prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary,
+// and with moderate type information. When multiple objects are printed, they'll be separated by a newline.
 func Fprintwt(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap|types, v)
 }
 
+// Fprintv prints the provided objects to the provided writer with verbose type information. When multiple
+// objects are printed, they'll be separated by a space.
 func Fprintv(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, allTypes, v)
 }
 
+// Fprintwv prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary,
+// and with verbose type information. When multiple objects are printed, they'll be separated by a newline.
 func Fprintwv(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap|allTypes, v)
 }
 
+// Print prints the provided objects to stderr. When multiple objects are printed, they'll be separated by a
+// space.
 func Print(v ...interface{}) (int, error) {
 	return printValues(none, v)
 }
 
+// Printw prints the provided objects to stderr, with wrapping (pretty-printing) where necessary. When multiple
+// objects are printed, they'll be separated by a newline.
 func Printw(v ...interface{}) (int, error) {
 	return printValues(wrap, v)
 }
 
+// Printt prints the provided objects to stderr with moderate type information. When multiple objects are
+// printed, they'll be separated by a space.
 func Printt(v ...interface{}) (int, error) {
 	return printValues(types, v)
 }
 
+// Printwt prints the provided objects to stderr, with wrapping (pretty-printing) where necessary, and with
+// moderate type information. When multiple objects are printed, they'll be separated by a newline.
 func Printwt(v ...interface{}) (int, error) {
 	return printValues(wrap|types, v)
 }
 
+// Printv prints the provided objects to stderr with verbose type information. When multiple objects are
+// printed, they'll be separated by a space.
 func Printv(v ...interface{}) (int, error) {
 	return printValues(allTypes, v)
 }
 
+// Printwv prints the provided objects to stderr, with wrapping (pretty-printing) where necessary, and with
+// verbose type information. When multiple objects are printed, they'll be separated by a newline.
 func Printwv(v ...interface{}) (int, error) {
 	return printValues(wrap|allTypes, v)
 }
 
+// Println prints the provided objects to stderr with a closing newline. When multiple objects are printed,
+// they'll be separated by a space.
 func Println(v ...interface{}) (int, error) {
 	return printlnValues(none, v)
 }
 
+// Printlnw prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// necessary. When multiple objects are printed, they'll be separated by a newline.
 func Printlnw(v ...interface{}) (int, error) {
 	return printlnValues(wrap, v)
 }
 
+// Printlnt prints the provided objects to stderr with a closing newline, and with moderate type information. When
+// multiple objects are printed, they'll be separated by a space.
 func Printlnt(v ...interface{}) (int, error) {
 	return printlnValues(types, v)
 }
 
+// Printlnwt prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// necessary, and with moderate type information. When multiple objects are printed, they'll be separated by a
+// newline.
 func Printlnwt(v ...interface{}) (int, error) {
 	return printlnValues(wrap|types, v)
 }
 
+// Printlnv prints the provided objects to stderr with a closing newline, and with verbose type information. When
+// multiple objects are printed, they'll be separated by a space.
 func Printlnv(v ...interface{}) (int, error) {
 	return printlnValues(allTypes, v)
 }
 
+// Printlnwv prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// necessary, and with verbose type information. When multiple objects are printed, they'll be separated by a
+// newline.
 func Printlnwv(v ...interface{}) (int, error) {
 	return printlnValues(wrap|allTypes, v)
 }
 
+// Sprint returns the string representation of the Go objects. When multiple objects are provided, they'll be
+// seprated by a space.
 func Sprint(v ...interface{}) string {
 	return sprintValues(none, v)
 }
 
+// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary.
+// When multiple objects are provided, they'll be seprated by a newline.
 func Sprintw(v ...interface{}) string {
 	return sprintValues(wrap, v)
 }
 
+// Sprint returns the string representation of the Go objects, with moderate type information. When multiple
+// objects are provided, they'll be seprated by a space.
 func Sprintt(v ...interface{}) string {
 	return sprintValues(types, v)
 }
 
+// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary,
+// and with moderate type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwt(v ...interface{}) string {
 	return sprintValues(wrap|types, v)
 }
 
+// Sprint returns the string representation of the Go objects, with verbose type information. When multiple
+// objects are provided, they'll be seprated by a space.
 func Sprintv(v ...interface{}) string {
 	return sprintValues(allTypes, v)
 }
 
+// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary,
+// and with verbose type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwv(v ...interface{}) string {
 	return sprintValues(wrap|allTypes, v)
 }

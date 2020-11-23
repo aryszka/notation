@@ -12,21 +12,21 @@ func TestPrint(t *testing.T) {
 		e string
 	}{{
 		p: Print,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `{foo: 42}`,
 	}, {
 		p: Printw,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `{
 	foo: 42,
 }`,
 	}, {
 		p: Printt,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{foo int}{foo: 42}`,
 	}, {
 		p: Printwt,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{
 	foo int
 }{
@@ -34,11 +34,11 @@ func TestPrint(t *testing.T) {
 }`,
 	}, {
 		p: Printv,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{foo int}{foo: int(42)}`,
 	}, {
 		p: Printwv,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{
 	foo int
 }{
@@ -76,22 +76,22 @@ func TestPrintln(t *testing.T) {
 		e string
 	}{{
 		p: Println,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: "{foo: 42}\n",
 	}, {
 		p: Printlnw,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `{
 	foo: 42,
 }
 `,
 	}, {
 		p: Printlnt,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: "struct{foo int}{foo: 42}\n",
 	}, {
 		p: Printlnwt,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{
 	foo int
 }{
@@ -100,11 +100,11 @@ func TestPrintln(t *testing.T) {
 `,
 	}, {
 		p: Printlnv,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: "struct{foo int}{foo: int(42)}\n",
 	}, {
 		p: Printlnwv,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		e: `struct{
 	foo int
 }{
@@ -113,7 +113,7 @@ func TestPrintln(t *testing.T) {
 `,
 	}, {
 		p: Println,
-		o: struct{foo int}{42},
+		o: struct{ foo int }{42},
 		f: true,
 	}} {
 		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
