@@ -316,31 +316,31 @@ func Sprint(v ...interface{}) string {
 	return sprintValues(none, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary.
+// Sprintw returns the string representation of the Go objects, with wrapping (and indentation) where necessary.
 // When multiple objects are provided, they'll be seprated by a newline.
 func Sprintw(v ...interface{}) string {
 	return sprintValues(wrap, v)
 }
 
-// Sprint returns the string representation of the Go objects, with moderate type information. When multiple
+// Sprintt returns the string representation of the Go objects, with moderate type information. When multiple
 // objects are provided, they'll be seprated by a space.
 func Sprintt(v ...interface{}) string {
 	return sprintValues(types, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
+// Sprintwt returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
 // and with moderate type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwt(v ...interface{}) string {
 	return sprintValues(wrap|types, v)
 }
 
-// Sprint returns the string representation of the Go objects, with verbose type information. When multiple
+// Sprintv returns the string representation of the Go objects, with verbose type information. When multiple
 // objects are provided, they'll be seprated by a space.
 func Sprintv(v ...interface{}) string {
 	return sprintValues(allTypes, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
+// Sprintwv returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
 // and with verbose type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwv(v ...interface{}) string {
 	return sprintValues(wrap|allTypes, v)

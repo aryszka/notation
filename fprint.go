@@ -40,32 +40,28 @@ func strLen(s str) str {
 	return s
 }
 
-func nodeLen(t int, n node) node {
-	// We assume here that an str is always contained
-	// by a node that has only a single str.
-	//
-	if s, ok := n.parts[0].(str); ok {
-		s = strLen(s)
-		n.parts[0] = s
-		n.len = len(s.val)
-		if s.raw == "" {
-			wl := wrapLen{
-				first: len(s.val),
-				max:   len(s.val),
-				last:  len(s.val),
-			}
-
-			n.wrapLen = wl
-			n.fullWrap = wl
-			return n
+func stringNodeLen(n node) node {
+	s := strLen(n.parts[0].(str))
+	n.parts[0] = s
+	n.len = len(s.val)
+	if s.raw == "" {
+		wl := wrapLen{
+			first: len(s.val),
+			max:   len(s.val),
+			last:  len(s.val),
 		}
 
-		n.wrapLen = s.rawLen
-		n.fullWrap = s.rawLen
+		n.wrapLen = wl
+		n.fullWrap = wl
 		return n
 	}
 
-	// measure all parts:
+	n.wrapLen = s.rawLen
+	n.fullWrap = s.rawLen
+	return n
+}
+
+func measureParts(t int, n node) node {
 	for i := range n.parts {
 		switch pt := n.parts[i].(type) {
 		case node:
@@ -77,7 +73,10 @@ func nodeLen(t int, n node) node {
 		}
 	}
 
-	// measure the unwrapped length:
+	return n
+}
+
+func measureUnwrapped(n node) node {
 	for _, p := range n.parts {
 		switch pt := p.(type) {
 		case node:
@@ -96,7 +95,10 @@ func nodeLen(t int, n node) node {
 		}
 	}
 
-	// measure the wrapped and the fully wrapped length:
+	return n
+}
+
+func measureWrapped(t int, n node) node {
 	var w, f int
 	for _, p := range n.parts {
 		switch pt := p.(type) {
@@ -183,6 +185,20 @@ func nodeLen(t int, n node) node {
 	n.fullWrap.max = max(n.fullWrap.max, f)
 	n.fullWrap.last = f
 
+	return n
+}
+
+func nodeLen(t int, n node) node {
+	// We assume here that an str is always contained
+	// by a node that has only a single str.
+	//
+	if _, ok := n.parts[0].(str); ok {
+		return stringNodeLen(n)
+	}
+
+	n = measureParts(t, n)
+	n = measureUnwrapped(n)
+	n = measureWrapped(t, n)
 	return n
 }
 
@@ -319,6 +335,59 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 	return n
 }
 
+func fprintWrapper(w *writer, t int, wrap bool, wr wrapper) {
+	if len(wr.items) == 0 {
+		return
+	}
+
+	if !wrap {
+		for i, ni := range wr.items {
+			if i > 0 {
+				w.write(wr.sep)
+			}
+
+			fprint(w, t, ni)
+		}
+
+		return
+	}
+
+	switch wr.mode {
+	case line:
+		var (
+			lines [][]node
+			last  int
+		)
+
+		for _, i := range wr.lineEnds {
+			lines = append(lines, wr.items[last:i])
+			last = i
+		}
+
+		for _, line := range lines {
+			w.line(1)
+			for i, ni := range line {
+				if i > 0 {
+					w.write(wr.sep)
+				}
+
+				fprint(w, 0, ni)
+			}
+		}
+	default:
+		t++
+		for _, ni := range wr.items {
+			w.line(t)
+			fprint(w, t, ni)
+			w.write(wr.suffix)
+		}
+
+		t--
+	}
+
+	w.line(t)
+}
+
 func fprint(w *writer, t int, n node) {
 	// handle write errors at a single place:
 	if w.err != nil {
@@ -330,56 +399,7 @@ func fprint(w *writer, t int, n node) {
 		case node:
 			fprint(w, t, part)
 		case wrapper:
-			if len(part.items) == 0 {
-				continue
-			}
-
-			if !n.wrap {
-				for i, ni := range part.items {
-					if i > 0 {
-						w.write(part.sep)
-					}
-
-					fprint(w, t, ni)
-				}
-
-				continue
-			}
-
-			switch part.mode {
-			case line:
-				var (
-					lines [][]node
-					last  int
-				)
-
-				for _, i := range part.lineEnds {
-					lines = append(lines, part.items[last:i])
-					last = i
-				}
-
-				for _, line := range lines {
-					w.line(1)
-					for i, ni := range line {
-						if i > 0 {
-							w.write(part.sep)
-						}
-
-						fprint(w, 0, ni)
-					}
-				}
-			default:
-				t++
-				for _, ni := range part.items {
-					w.line(t)
-					fprint(w, t, ni)
-					w.write(part.suffix)
-				}
-
-				t--
-			}
-
-			w.line(t)
+			fprintWrapper(w, t, n.wrap, part)
 		default:
 			w.write(part)
 		}

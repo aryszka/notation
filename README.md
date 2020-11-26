@@ -1,5 +1,6 @@
 # Notation - print Go objects
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/aryszka/notation)](https://goreportcard.com/report/github.com/aryszka/notation)
 [![codecov](https://codecov.io/gh/aryszka/notation/branch/master/graph/badge.svg?token=7M18MEAVQW)](https://codecov.io/gh/aryszka/notation)
 
 This package can be used to print (or sprint) Go objects for debugging purposes, with optional wrapping

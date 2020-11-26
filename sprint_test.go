@@ -40,7 +40,7 @@ func (test test) run(t *testing.T, sprint func(...interface{}) string) {
 	})
 }
 
-func (tests tests) run(t *testing.T, sprint func(...interface{}) string) {
+func (ts tests) run(t *testing.T, sprint func(...interface{}) string) {
 	logEnv := func(name string, dflt int) {
 		t.Logf("%s=%d", name, config(name, dflt))
 	}
@@ -49,14 +49,14 @@ func (tests tests) run(t *testing.T, sprint func(...interface{}) string) {
 	logEnv("LINEWIDTH", 80-8)
 	logEnv("LINEWIDTH1", 80*3/2-8)
 
-	for _, ti := range tests {
+	for _, ti := range ts {
 		ti.run(t, sprint)
 	}
 }
 
-func (t tests) expect(expect map[string]string) tests {
+func (ts tests) expect(expect map[string]string) tests {
 	var set tests
-	for _, test := range t {
+	for _, test := range ts {
 		if expect, doSet := expect[test.title]; doSet {
 			test.expect = expect
 		}
@@ -136,8 +136,8 @@ func defaultSet() tests {
 	}
 }
 
-func (t tests) expectTypes() tests {
-	return t.expect(map[string]string{
+func (ts tests) expectTypes() tests {
+	return ts.expect(map[string]string{
 		"custom false":                       "myBool(false)",
 		"custom true":                        "myBool(true)",
 		"custom int":                         "myInt(42)",
@@ -185,8 +185,8 @@ func (t tests) expectTypes() tests {
 	})
 }
 
-func (t tests) expectVerboseTypes() tests {
-	return t.expectTypes().expect(map[string]string{
+func (ts tests) expectVerboseTypes() tests {
+	return ts.expectTypes().expect(map[string]string{
 		"false":                              "bool(false)",
 		"true":                               "bool(true)",
 		"int":                                "int(42)",
@@ -223,8 +223,8 @@ func (t tests) expectVerboseTypes() tests {
 	})
 }
 
-func (t tests) expectWrapAll() tests {
-	return t.expect(map[string]string{
+func (ts tests) expectWrapAll() tests {
+	return ts.expect(map[string]string{
 		"array": `[3]{
 	1,
 	2,
@@ -308,8 +308,8 @@ func (t tests) expectWrapAll() tests {
 	})
 }
 
-func (t tests) expectOnlyLongWrapped() tests {
-	return t.expect(map[string]string{
+func (ts tests) expectOnlyLongWrapped() tests {
+	return ts.expect(map[string]string{
 		"long item": `[]{
 	"foobarbazqux",
 }`,
@@ -319,8 +319,8 @@ func (t tests) expectOnlyLongWrapped() tests {
 	})
 }
 
-func (t tests) expectWrapAllWithTypes() tests {
-	return t.expectTypes().expect(map[string]string{
+func (ts tests) expectWrapAllWithTypes() tests {
+	return ts.expectTypes().expect(map[string]string{
 		"array": `[3]int{
 	1,
 	2,
@@ -450,8 +450,8 @@ func (t tests) expectWrapAllWithTypes() tests {
 	})
 }
 
-func (t tests) expectOnlyLongWrappedWithTypes() tests {
-	return t.expectTypes().expect(map[string]string{
+func (ts tests) expectOnlyLongWrappedWithTypes() tests {
+	return ts.expectTypes().expect(map[string]string{
 		"nil channel": `struct{c chan int}{
 	c: nil,
 }`,
@@ -517,8 +517,8 @@ func (t tests) expectOnlyLongWrappedWithTypes() tests {
 	})
 }
 
-func (t tests) expectWrapAllWithVerboseTypes() tests {
-	return t.expectVerboseTypes().expect(map[string]string{
+func (ts tests) expectWrapAllWithVerboseTypes() tests {
+	return ts.expectVerboseTypes().expect(map[string]string{
 		"array": `[3]int{
 	int(1),
 	int(2),
@@ -659,8 +659,8 @@ func (t tests) expectWrapAllWithVerboseTypes() tests {
 	})
 }
 
-func (t tests) expectOnlyLongWrappedWithVerboseTypes() tests {
-	return t.expectVerboseTypes().expect(map[string]string{
+func (ts tests) expectOnlyLongWrappedWithVerboseTypes() tests {
+	return ts.expectVerboseTypes().expect(map[string]string{
 		"nil channel": `struct{c chan int}{
 	c: (chan int)(nil),
 }`,

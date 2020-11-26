@@ -3,6 +3,7 @@ package notation
 import (
 	"bytes"
 	"errors"
+	"io"
 	"testing"
 )
 
@@ -78,129 +79,61 @@ func TestFailingWriter(t *testing.T) {
 }
 
 func TestFprint(t *testing.T) {
-	t.Run("Fprint", func(t *testing.T) {
-		const expect = `{fooBarBaz: 42}`
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprint(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-	})
-
-	t.Run("Fprintw", func(t *testing.T) {
-		const expect = `{
+	defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
+	o := struct{ fooBarBaz int }{42}
+	for _, test := range []struct {
+		name   string
+		fn     func(io.Writer, ...interface{}) (int, error)
+		expect string
+	}{{
+		name:   "Fprint",
+		fn:     Fprint,
+		expect: `{fooBarBaz: 42}`,
+	}, {
+		name: "Fprintw",
+		fn:   Fprintw,
+		expect: `{
 	fooBarBaz: 42,
-}`
-
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprintw(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-	})
-
-	t.Run("Fprintt", func(t *testing.T) {
-		const expect = `struct{fooBarBaz int}{fooBarBaz: 42}`
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprintt(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-	})
-
-	t.Run("Fprintwt", func(t *testing.T) {
-		const expect = `struct{
+}`,
+	}, {
+		name:   "Fprintt",
+		fn:     Fprintt,
+		expect: `struct{fooBarBaz int}{fooBarBaz: 42}`,
+	}, {
+		name: "Fprintwt",
+		fn:   Fprintwt,
+		expect: `struct{
 	fooBarBaz int
 }{
 	fooBarBaz: 42,
-}`
-
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprintwt(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-	})
-
-	t.Run("Fprintv", func(t *testing.T) {
-		const expect = `struct{fooBarBaz int}{fooBarBaz: int(42)}`
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprintv(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
-
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-	})
-
-	t.Run("Fprintv", func(t *testing.T) {
-		const expect = `struct{
+}`,
+	}, {
+		name:   "Fprintv",
+		fn:     Fprintv,
+		expect: `struct{fooBarBaz int}{fooBarBaz: int(42)}`,
+	}, {
+		name: "Fprintwv",
+		fn:   Fprintwv,
+		expect: `struct{
 	fooBarBaz int
 }{
 	fooBarBaz: int(42),
-}`
-		var b bytes.Buffer
-		o := struct{ fooBarBaz int }{42}
-		defer withEnv(t, "TABWIDTH=0", "LINEWIDTH=0", "LINEWIDTH1=0")()
-		n, err := Fprintwv(&b, o)
-		if err != nil {
-			t.Fatal(err)
-		}
+}`,
+	}} {
+		t.Run(test.name, func(t *testing.T) {
+			var b bytes.Buffer
+			n, err := test.fn(&b, o)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		if n != len(expect) {
-			t.Fatalf("invalid write length; expected: %d, got: %d", len(expect), n)
-		}
+			if n != len(test.expect) {
+				t.Fatalf("invalid write length; expected %d, got: %d", len(test.expect), n)
+			}
 
-		if b.String() != expect {
-			t.Fatalf("invalid output; expected: %s, got: %s", expect, b.String())
-		}
-	})
+			if b.String() != test.expect {
+				t.Fatalf("invalid output; expected: %s, got: %s", test.expect, b.String())
+			}
+		})
+	}
 }
