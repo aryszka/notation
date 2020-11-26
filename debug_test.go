@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestDebugNode(t *testing.T) {
+	func TestDebugNode(t *testing.T) {
 	const expect = `"foobarbaz"`
 	o := "foobarbaz"
 	n := reflectValue(none, &pending{values: make(map[uintptr]nodeRef)}, reflect.ValueOf(o))
