@@ -245,7 +245,7 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 			n.parts[i] = part
 			if part.wrap {
 				// This is an approximation: sometimes
-				// part.fullWrap.last should be applied
+				// part.fullWrap.first should be applied
 				// here, but usually those are the same.
 				//
 				cc0 -= part.wrapLen.first
