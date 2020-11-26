@@ -261,7 +261,7 @@ over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown 
 dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The
 quick brown fox jumps over the lazy dog.`
 
-notation.Println(s)
+notation.Printlnw(s)
 ```
 
 Output:
