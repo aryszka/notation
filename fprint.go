@@ -123,10 +123,12 @@ func nodeLen(t int, n node) node {
 
 			n.wrapLen.first = ifZero(n.wrapLen.first, w)
 			n.wrapLen.max = max(n.wrapLen.max, w)
+			w = 0
+
 			n.fullWrap.first = ifZero(n.fullWrap.first, f)
 			n.fullWrap.max = max(n.fullWrap.max, f)
-			w = 0
 			f = 0
+
 			switch pt.mode {
 			case line:
 				// line wrapping is flexible, here
@@ -161,8 +163,9 @@ func nodeLen(t int, n node) node {
 			}
 
 			n.wrapLen.max = max(n.wrapLen.max, w)
-			n.fullWrap.max = max(n.fullWrap.max, f)
 			w = 0
+
+			n.fullWrap.max = max(n.fullWrap.max, f)
 			f = 0
 		default:
 			w += len(fmt.Sprint(p))
@@ -170,12 +173,16 @@ func nodeLen(t int, n node) node {
 		}
 	}
 
+	// commit the remaining wrap length
 	n.wrapLen.first = ifZero(n.wrapLen.first, w)
 	n.wrapLen.max = max(n.wrapLen.max, w)
 	n.wrapLen.last = w
+
+	// commit the remaining full wrap length
 	n.fullWrap.first = ifZero(n.fullWrap.first, f)
 	n.fullWrap.max = max(n.fullWrap.max, f)
 	n.fullWrap.last = f
+
 	return n
 }
 
@@ -313,6 +320,7 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 }
 
 func fprint(w *writer, t int, n node) {
+	// handle write errors at a single place:
 	if w.err != nil {
 		return
 	}

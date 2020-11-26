@@ -42,6 +42,7 @@ to 112 columns, when the output is considered to be more readable that way. This
 are not wrapped even with the **`w`** variant of the functions.
 
 For the available functions, see also the [godoc](https://godoc.org/github.com/aryszka/notation).
+(Alternatively: [pkg.go.dev](https://pkg.go.dev/github.com/aryszka/notation).)
 
 ### Example
 
