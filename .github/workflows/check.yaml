@@ -1,0 +1,8 @@
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v2
+    - run: make ci-check

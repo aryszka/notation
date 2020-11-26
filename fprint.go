@@ -65,6 +65,7 @@ func nodeLen(t int, n node) node {
 		return n
 	}
 
+	// measure all parts:
 	for i := range n.parts {
 		switch pt := n.parts[i].(type) {
 		case node:
@@ -76,6 +77,7 @@ func nodeLen(t int, n node) node {
 		}
 	}
 
+	// measure the unwrapped length:
 	for _, p := range n.parts {
 		switch pt := p.(type) {
 		case node:
@@ -94,6 +96,7 @@ func nodeLen(t int, n node) node {
 		}
 	}
 
+	// measure the wrapped and the fully wrapped length:
 	var w, f int
 	for _, p := range n.parts {
 		switch pt := p.(type) {
@@ -192,6 +195,7 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 		return n
 	}
 
+	// otherwise, we need to wrap the node:
 	n.wrap = true
 
 	// We assume here that an str is always contained
@@ -203,6 +207,10 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 		return n
 	}
 
+	// before iterating over the parts, take a copy of
+	// the available column width and modify only the
+	// copy, to support trackback.
+	//
 	cc0, cc1 := c0, c1
 	lastWrapperIndex := -1
 	var trackBack bool

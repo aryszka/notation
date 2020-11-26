@@ -1004,9 +1004,9 @@ func TestLongString(t *testing.T) {
 
 func TestCyclicReferences(t *testing.T) {
 	t.Run("slice", func(t *testing.T) {
-		const expect = `r0=[]{r0}`
-		l := []interface{}{"foo"}
-		l[0] = l
+		const expect = `r0=[]{"foo", r0}`
+		l := []interface{}{"foo", "bar"}
+		l[1] = l
 		s := Sprint(l)
 		if s != expect {
 			t.Fatalf("expected: %s, got: %s", expect, s)
