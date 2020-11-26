@@ -1,183 +1,222 @@
 package notation
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
-func unwrappable(n node) bool {
-	return n.len == n.wrapLen.max &&
-		n.len == n.fullWrap.max
-}
-
-func initialize(t *int, v int) {
-	if *t > 0 {
-		return
+func ifZero(a, b int) int {
+	if a == 0 {
+		return b
 	}
 
-	*t = v
+	return a
 }
 
-func max(t *int, v int) {
-	if *t >= v {
-		return
+func max(a, b int) int {
+	if a > b {
+		return a
 	}
 
-	*t = v
+	return b
 }
 
-func nodeLen(t int, n node) node {
-	var w, f int
-	for i, p := range n.parts {
-		switch part := p.(type) {
-		case string:
-			n.len += len(part)
-			w += len(part)
-			f += len(part)
-		case str:
-			// We assume here that an str is always contained by a node that has only a
-			// single str.
-			//
-			// If this changes in the future, then we need to provide tests for the
-			// additional cases. If this doesn't change anytime soon, then we can
-			// refactor this part.
-			//
-			n.len = len(part.val)
-			if part.raw == "" {
-				w = len(part.val)
-				f = len(part.val)
-			} else {
-				lines := strings.Split(part.raw, "\n")
-				part.rawLen.first = len(lines[0])
-				for _, line := range lines {
-					if len(line) > part.rawLen.max {
-						part.rawLen.max = len(line)
-					}
-				}
+func strLen(s str) str {
+	l := strings.Split(s.raw, "\n")
+	for j, li := range l {
+		if j == 0 {
+			s.rawLen.first = len(li)
+		}
 
-				part.rawLen.last = len(lines[len(lines)-1])
-				n.parts[i] = part
-				n.wrapLen.first = part.rawLen.first
-				n.fullWrap.first = part.rawLen.first
-				n.wrapLen.max = part.rawLen.max
-				n.fullWrap.max = part.rawLen.max
-				w = part.rawLen.last
-				f = part.rawLen.last
-			}
-		case node:
-			part = nodeLen(t, part)
-			n.parts[i] = part
-			n.len += part.len
-			if unwrappable(part) {
-				w += part.len
-				f += part.len
-				continue
-			}
+		if len(li) > s.rawLen.max {
+			s.rawLen.max = len(li)
+		}
 
-			if part.len == part.wrapLen.max {
-				w += part.len
-			} else {
-				w += part.wrapLen.first
-				initialize(&n.wrapLen.first, w)
-				max(&n.wrapLen.max, w)
-				w = part.wrapLen.last
-			}
-
-			f += part.fullWrap.first
-			initialize(&n.fullWrap.first, f)
-			max(&n.fullWrap.max, f)
-			f = part.fullWrap.last
-		case wrapper:
-			if len(part.items) == 0 {
-				continue
-			}
-
-			initialize(&n.wrapLen.first, w)
-			max(&n.wrapLen.max, w)
-			initialize(&n.fullWrap.first, f)
-			max(&n.fullWrap.max, f)
-			w, f = 0, 0
-			n.len += (len(part.items) - 1) * len(part.sep)
-			if part.mode == line {
-				w += (len(part.items) - 1) * len(part.sep)
-			}
-
-			for j, item := range part.items {
-				item = nodeLen(t, item)
-				part.items[j] = item
-				n.len += item.len
-				switch part.mode {
-				case line:
-					w += item.len
-					max(&f, item.len)
-				default:
-					wj := t + item.len + len(part.suffix)
-					max(&w, wj)
-					fj := t + item.fullWrap.max
-					max(&f, fj)
-					fj = t + item.fullWrap.last + len(part.suffix)
-					max(&f, fj)
-				}
-			}
-
-			max(&n.wrapLen.max, w)
-			max(&n.fullWrap.max, f)
-			w, f = 0, 0
+		if j == len(l)-1 {
+			s.rawLen.last = len(li)
 		}
 	}
 
-	initialize(&n.wrapLen.first, w)
-	max(&n.wrapLen.max, w)
+	return s
+}
+
+func nodeLen(t int, n node) node {
+	// We assume here that an str is always contained
+	// by a node that has only a single str.
+	//
+	if s, ok := n.parts[0].(str); ok {
+		s = strLen(s)
+		n.parts[0] = s
+		n.len = len(s.val)
+		if s.raw == "" {
+			wl := wrapLen{
+				first: len(s.val),
+				max:   len(s.val),
+				last:  len(s.val),
+			}
+
+			n.wrapLen = wl
+			n.fullWrap = wl
+			return n
+		}
+
+		n.wrapLen = s.rawLen
+		n.fullWrap = s.rawLen
+		return n
+	}
+
+	for i := range n.parts {
+		switch pt := n.parts[i].(type) {
+		case node:
+			n.parts[i] = nodeLen(t, pt)
+		case wrapper:
+			for j := range pt.items {
+				pt.items[j] = nodeLen(t, pt.items[j])
+			}
+		}
+	}
+
+	for _, p := range n.parts {
+		switch pt := p.(type) {
+		case node:
+			n.len += pt.len
+		case wrapper:
+			if len(pt.items) == 0 {
+				continue
+			}
+
+			n.len += (len(pt.items) - 1) * len(pt.sep)
+			for _, pti := range pt.items {
+				n.len += pti.len
+			}
+		default:
+			n.len += len(fmt.Sprint(p))
+		}
+	}
+
+	var w, f int
+	for _, p := range n.parts {
+		switch pt := p.(type) {
+		case node:
+			w += pt.wrapLen.first
+			if pt.len != pt.wrapLen.first {
+				n.wrapLen.first = ifZero(n.wrapLen.first, w)
+				n.wrapLen.max = max(n.wrapLen.max, w)
+				n.wrapLen.max = max(n.wrapLen.max, pt.wrapLen.max)
+				w = pt.wrapLen.last
+			}
+
+			f += pt.fullWrap.first
+			if pt.len != pt.fullWrap.first {
+				n.fullWrap.first = ifZero(n.fullWrap.first, f)
+				n.fullWrap.max = max(n.fullWrap.max, f)
+				n.fullWrap.max = max(n.fullWrap.max, pt.fullWrap.max)
+				f = pt.fullWrap.last
+			}
+		case wrapper:
+			if len(pt.items) == 0 {
+				continue
+			}
+
+			n.wrapLen.first = ifZero(n.wrapLen.first, w)
+			n.wrapLen.max = max(n.wrapLen.max, w)
+			n.fullWrap.first = ifZero(n.fullWrap.first, f)
+			n.fullWrap.max = max(n.fullWrap.max, f)
+			w = 0
+			f = 0
+			switch pt.mode {
+			case line:
+				// line wrapping is flexible, here
+				// we measure the longest case
+				//
+				w = (len(pt.items) - 1) * len(pt.sep)
+				for _, pti := range pt.items {
+					w += pti.len
+				}
+
+				// here me measure the shortest
+				// possible case
+				//
+				for _, pti := range pt.items {
+					f = max(f, pti.fullWrap.max)
+				}
+			default:
+				// for non-full wrap, we measure the full
+				// length of the items
+				//
+				for _, pti := range pt.items {
+					w = max(w, t+pti.len+len(pt.suffix))
+				}
+
+				// for full wrap, we measure the fully
+				// wrapped length of the items
+				//
+				for _, pti := range pt.items {
+					f = max(f, t+pti.fullWrap.max)
+					f = max(f, t+pti.fullWrap.last+len(pt.suffix))
+				}
+			}
+
+			n.wrapLen.max = max(n.wrapLen.max, w)
+			n.fullWrap.max = max(n.fullWrap.max, f)
+			w = 0
+			f = 0
+		default:
+			w += len(fmt.Sprint(p))
+			f += len(fmt.Sprint(p))
+		}
+	}
+
+	n.wrapLen.first = ifZero(n.wrapLen.first, w)
+	n.wrapLen.max = max(n.wrapLen.max, w)
 	n.wrapLen.last = w
-	initialize(&n.fullWrap.first, f)
-	max(&n.fullWrap.max, f)
+	n.fullWrap.first = ifZero(n.fullWrap.first, f)
+	n.fullWrap.max = max(n.fullWrap.max, f)
 	n.fullWrap.last = f
 	return n
 }
 
 func wrapNode(t, cf0, c0, c1 int, n node) node {
+	// fits:
 	if n.len <= c0 {
 		return n
 	}
 
+	// we don't want to make it longer:
 	if n.wrapLen.max >= n.len && n.fullWrap.max >= n.len {
 		return n
 	}
 
-	if n.len <= c1 && n.len-c0 <= n.wrapLen.max {
+	// tolerate below c1 when it's not worth wrapping:
+	if n.len <= c1 && n.len-c0 <= c0-n.wrapLen.max {
 		return n
 	}
 
 	n.wrap = true
+
+	// We assume here that an str is always contained
+	// by a node that has only a single str.
+	//
+	if s, ok := n.parts[0].(str); ok {
+		s.useRaw = s.raw != ""
+		n.parts[0] = s
+		return n
+	}
+
 	cc0, cc1 := c0, c1
 	lastWrapperIndex := -1
 	var trackBack bool
 	for i := 0; i < len(n.parts); i++ {
 		p := n.parts[i]
 		switch part := p.(type) {
-		case string:
-			cc0 -= len(part)
-			cc1 -= len(part)
-			if !trackBack && cc1 < 0 {
-				cc0 = 0
-				cc1 = 0
-				i = lastWrapperIndex
-				trackBack = true
-			}
-		case str:
-			// We assume here that an str is always contained by a node that has only a
-			// single str. Therefore we don't need to trackback to here, because the
-			// decision on wrapping was already made for the node.
-			//
-			// If this changes in the future, then we need to provide tests for the
-			// additional cases. If this doesn't change anytime soon, then we can
-			// refactor this part.
-			//
-			part.useRaw = part.raw != ""
-			n.parts[i] = part
 		case node:
 			part = wrapNode(t, cf0, cc0, cc1, part)
 			n.parts[i] = part
 			if part.wrap {
-				// This is an approximation: sometimes part.fullWrap.first should be applied
+				// This is an approximation: sometimes
+				// part.fullWrap.last should be applied
 				// here, but usually those are the same.
+				//
 				cc0 -= part.wrapLen.first
 				cc1 -= part.wrapLen.first
 			} else {
@@ -185,12 +224,26 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 				cc1 -= part.len
 			}
 
-			if !trackBack && cc1 < 0 {
-				cc0 = 0
-				cc1 = 0
-				i = lastWrapperIndex
-				trackBack = true
+			if cc1 >= 0 {
+				if part.wrap {
+					cc0 = c0 - part.wrapLen.last
+					cc1 = c1 - part.wrapLen.last
+				}
+
+				continue
 			}
+
+			if trackBack {
+				continue
+			}
+
+			// trackback from after the last wrapper:
+			i = lastWrapperIndex
+			trackBack = true
+
+			// force wrapping during trackback:
+			cc0 = 0
+			cc1 = 0
 		case wrapper:
 			if len(part.items) == 0 {
 				continue
@@ -201,37 +254,50 @@ func wrapNode(t, cf0, c0, c1 int, n node) node {
 			lastWrapperIndex = i
 			switch part.mode {
 			case line:
+				// we only set the line endings. We use
+				// the full column width:
+				//
 				cl := cf0 - t
 				var w int
-				for j, ni := range part.items {
-					if w > 0 && w+len(part.sep)+ni.len > cl {
+				for j, nj := range part.items {
+					if w > 0 && w+len(part.sep)+nj.len > cl {
+						part.lineEnds = append(part.lineEnds, j)
 						w = 0
-						part.lineEnds = append(
-							part.lineEnds,
-							j,
-						)
 					}
 
 					if w > 0 {
 						w += len(part.sep)
 					}
 
-					w += ni.len
+					w += nj.len
 				}
 
 				part.lineEnds = append(part.lineEnds, len(part.items))
 				n.parts[i] = part
 			default:
 				for j := range part.items {
-					part.items[j] = wrapNode(
-						t,
-						cf0,
-						c0-t,
-						c1-t,
-						part.items[j],
-					)
+					part.items[j] = wrapNode(t, cf0, c0-t, c1-t, part.items[j])
 				}
 			}
+		default:
+			s := fmt.Sprint(part)
+			cc0 -= len(s)
+			cc1 -= len(s)
+			if cc1 >= 0 {
+				continue
+			}
+
+			if trackBack {
+				continue
+			}
+
+			// trackback from after the last wrapper:
+			i = lastWrapperIndex
+			trackBack = true
+
+			// force wrapping during trackback:
+			cc0 = 0
+			cc1 = 0
 		}
 	}
 
@@ -277,8 +343,7 @@ func fprint(w *writer, t int, n node) {
 				}
 
 				for _, line := range lines {
-					w.blankLine()
-					w.tabs(1)
+					w.line(1)
 					for i, ni := range line {
 						if i > 0 {
 							w.write(part.sep)

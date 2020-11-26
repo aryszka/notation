@@ -38,11 +38,10 @@ func reflectPrimitive(o opts, r reflect.Value, v interface{}, suppressType ...st
 	}
 
 	for _, suppress := range suppressType {
-		if tn.parts[0] != suppress {
-			continue
+		if tn.parts[0] == suppress {
+			return nodeOf(s)
 		}
 
-		return nodeOf(s)
 	}
 
 	return nodeOf(tn, "(", s, ")")
@@ -63,31 +62,33 @@ func reflectNil(o opts, groupUnnamedType bool, r reflect.Value) node {
 
 func reflectItems(o opts, p *pending, prefix string, r reflect.Value) node {
 	typ := r.Type()
-	var items wrapper
-	if typ.Elem().Name() == "uint8" {
-		items = wrapper{sep: " ", mode: line}
+	var w wrapper
+	if typ.Elem().Kind() == reflect.Uint8 {
+		w.sep = " "
+		w.mode = line
 		for i := 0; i < r.Len(); i++ {
-			items.items = append(
-				items.items,
+			w.items = append(
+				w.items,
 				nodeOf(fmt.Sprintf("%02x", r.Index(i).Uint())),
 			)
 		}
 	} else {
-		items = wrapper{sep: ", ", suffix: ","}
+		w.sep = ", "
+		w.suffix = ","
 		itemOpts := o | skipTypes
 		for i := 0; i < r.Len(); i++ {
-			items.items = append(
-				items.items,
+			w.items = append(
+				w.items,
 				reflectValue(itemOpts, p, r.Index(i)),
 			)
 		}
 	}
 
-	if _, t, _ := withType(o); !t {
-		return nodeOf(prefix, "{", items, "}")
+	if _, t, _ := withType(o); t {
+		return nodeOf(reflectType(typ), "{", w, "}")
 	}
 
-	return nodeOf(reflectType(typ), "{", items, "}")
+	return nodeOf(prefix, "{", w, "}")
 }
 
 func reflectHidden(o opts, hidden string, r reflect.Value) node {
@@ -95,11 +96,11 @@ func reflectHidden(o opts, hidden string, r reflect.Value) node {
 		return reflectNil(o, true, r)
 	}
 
-	if _, t, _ := withType(o); !t {
-		return nodeOf(hidden)
+	if _, t, _ := withType(o); t {
+		return reflectType(r.Type())
 	}
 
-	return reflectType(r.Type())
+	return nodeOf(hidden)
 }
 
 func reflectArray(o opts, p *pending, r reflect.Value) node {
@@ -138,46 +139,38 @@ func reflectMap(o opts, p *pending, r reflect.Value) node {
 	}
 
 	var skeys []string
-	items := wrapper{sep: ", ", suffix: ","}
 	itemOpts := o | skipTypes
-	keys := r.MapKeys()
 	sv := make(map[string]reflect.Value)
 	sn := make(map[string]node)
-	for _, key := range keys {
+	for _, key := range r.MapKeys() {
+		kn := reflectValue(itemOpts, p, key)
 		var b bytes.Buffer
-		nk := reflectValue(itemOpts, p, key)
 		wr := writer{w: &b}
-		fprint(&wr, 0, nk)
+		fprint(&wr, 0, kn)
 		skey := b.String()
 		skeys = append(skeys, skey)
 		sv[skey] = key
-		sn[skey] = nk
+		sn[skey] = kn
 	}
 
 	if o&randomMaps == 0 {
 		sort.Strings(skeys)
 	}
 
+	w := wrapper{sep: ", ", suffix: ","}
 	for _, skey := range skeys {
-		items.items = append(
-			items.items,
-			nodeOf(
-				sn[skey],
-				": ",
-				reflectValue(
-					itemOpts,
-					p,
-					r.MapIndex(sv[skey]),
-				),
-			),
+		vn := reflectValue(itemOpts, p, r.MapIndex(sv[skey]))
+		w.items = append(
+			w.items,
+			nodeOf(sn[skey], ": ", vn),
 		)
 	}
 
 	if _, t, _ := withType(o); !t {
-		return nodeOf("map{", items, "}")
+		return nodeOf("map{", w, "}")
 	}
 
-	return nodeOf(reflectType(r.Type()), "{", items, "}")
+	return nodeOf(reflectType(r.Type()), "{", w, "}")
 }
 
 func reflectPointer(o opts, p *pending, r reflect.Value) node {
@@ -229,17 +222,10 @@ func reflectStruct(o opts, p *pending, r reflect.Value) node {
 	rt := r.Type()
 	for i := 0; i < r.NumField(); i++ {
 		name := rt.Field(i).Name
+		fv := reflectValue(fieldOpts, p, r.FieldByName(name))
 		wr.items = append(
 			wr.items,
-			nodeOf(
-				name,
-				": ",
-				reflectValue(
-					fieldOpts,
-					p,
-					r.FieldByName(name),
-				),
-			),
+			nodeOf(name, ": ", fv),
 		)
 	}
 
@@ -265,12 +251,12 @@ func reflectUnsafePointer(o opts, r reflect.Value) node {
 func checkPending(p *pending, r reflect.Value) (applyRef func(node) node, ref node, isPending bool) {
 	applyRef = func(n node) node { return n }
 	switch r.Kind() {
-	case reflect.Slice, reflect.Map:
-	case reflect.Ptr:
-		if r.IsNil() {
-			return
-		}
+	case reflect.Slice, reflect.Map, reflect.Ptr:
 	default:
+		return
+	}
+
+	if r.IsNil() {
 		return
 	}
 

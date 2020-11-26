@@ -64,13 +64,8 @@ func reflectInterfaceType(t reflect.Type) node {
 	wr := wrapper{sep: "; "}
 	for i := 0; i < t.NumMethod(); i++ {
 		method := t.Method(i)
-		wr.items = append(
-			wr.items,
-			nodeOf(
-				method.Name,
-				reflectFuncBaseType(method.Type),
-			),
-		)
+		mn := nodeOf(method.Name, reflectFuncBaseType(method.Type))
+		wr.items = append(wr.items, mn)
 	}
 
 	return nodeOf("interface{", wr, "}")
@@ -92,14 +87,8 @@ func reflectStructType(t reflect.Type) node {
 	wr := wrapper{sep: "; "}
 	for i := 0; i < t.NumField(); i++ {
 		fi := t.Field(i)
-		wr.items = append(
-			wr.items,
-			nodeOf(
-				fi.Name,
-				" ",
-				reflectType(fi.Type),
-			),
-		)
+		fn := nodeOf(fi.Name, " ", reflectType(fi.Type))
+		wr.items = append(wr.items, fn)
 	}
 
 	return nodeOf("struct{", wr, "}")

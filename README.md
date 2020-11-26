@@ -1,7 +1,7 @@
-# Notation - Print Go objects
+# Notation - print Go objects
 
-This package can be used to print (or sprint) Go objects with optional wrapping (indentation) and optional type
-information for debugging purposes.
+This package can be used to print (or sprint) Go objects for debugging purposes, with optional wrapping
+(indentation) and optional type information.
 
 ### Alternatives
 
@@ -11,7 +11,7 @@ Notation is similar to the following great, more established and mature packages
 - [litter](https://github.com/sanity-io/litter)
 - [utter](https://github.com/kortschak/utter)
 
-Notation differs from these primarily in the 'flavour' of printing and the package interface.
+Notation differs from these primarily in the 'flavor' of printing and the package interface.
 
 ### Installation
 
@@ -47,7 +47,7 @@ For the available functions, see also the [godoc](https://godoc.org/github.com/a
 
 Assuming to have the required types defined, if we do the following:
 
-```go
+```
 b := bike{
 	frame: frame{
 		fork:       fork{},
@@ -87,12 +87,17 @@ s := notation.Sprintw(b)
 
 We get the following string:
 
-```go
+```
 {
 	frame: {
 		fork: {
 			wheel: {size: 70, cassette: nil},
-			handlebar: {levers: []{{withShift: true}, {withShift: true}}},
+			handlebar: {
+				levers: []{
+					{withShift: true},
+					{withShift: true},
+				},
+			},
 			frontBrake: {discSize: 160},
 		},
 		saddlePost: {saddle: {}},
@@ -111,7 +116,10 @@ We get the following string:
 		chain: {},
 		levers: []{{withShift: true}, {withShift: true}},
 	},
-	wheels: []{{size: 70, cassette: nil}, {size: 70, cassette: {wheels: 11, chain: {}}}},
+	wheels: []{
+		{size: 70, cassette: nil},
+		{size: 70, cassette: {wheels: 11, chain: {}}},
+	},
 	handlebar: {levers: []{{withShift: true}, {withShift: true}}},
 	saddle: {},
 }
@@ -119,11 +127,14 @@ We get the following string:
 
 Using `notation.Sprintwv` instead of `notation.Sprintw`, we would get the following string:
 
-```go
+```
 bike{
 	frame: frame{
 		fork: fork{
-			wheel: *wheel{size: float64(70), cassette: (*cassette)(nil)},
+			wheel: *wheel{
+				size: float64(70),
+				cassette: (*cassette)(nil),
+			},
 			handlebar: *handlebar{
 				levers: []*lever{
 					*lever{withShift: bool(true)},
@@ -133,32 +144,63 @@ bike{
 			frontBrake: *brake{discSize: float64(160)},
 		},
 		saddlePost: saddlePost{saddle: *saddle{}},
-		bottomBracket: *bracket{crank: *crank{wheels: int(2), chain: *chain{}}},
+		bottomBracket: *bracket{
+			crank: *crank{
+				wheels: int(2),
+				chain: *chain{},
+			},
+		},
 		frontDerailleur: *derailleur{gears: int(2)},
 		rearDerailleur: *derailleur{gears: int(11)},
 		rearBrake: *brake{discSize: float64(140)},
 		rearWheel: *wheel{
 			size: float64(70),
-			cassette: *cassette{wheels: int(11), chain: *chain{}},
+			cassette: *cassette{
+				wheels: int(11),
+				chain: *chain{},
+			},
 		},
 	},
 	driveTrain: driveTrain{
-		bottomBracket: bracket{crank: *crank{wheels: int(2), chain: *chain{}}},
+		bottomBracket: bracket{
+			crank: *crank{
+				wheels: int(2),
+				chain: *chain{},
+			},
+		},
 		crank: crank{wheels: int(2), chain: *chain{}},
-		brakes: []brake{brake{discSize: float64(160)}, brake{discSize: float64(140)}},
+		brakes: []brake{
+			brake{discSize: float64(160)},
+			brake{discSize: float64(140)},
+		},
 		derailleurs: []derailleur{
-			derailleur{gears: int(2)},
-			derailleur{gears: int(11)},
+			derailleur{
+				gears: int(2),
+			},
+			derailleur{
+				gears: int(11),
+			},
 		},
 		cassette: cassette{wheels: int(11), chain: *chain{}},
 		chain: chain{},
-		levers: []lever{lever{withShift: bool(true)}, lever{withShift: bool(true)}},
+		levers: []lever{
+			lever{withShift: bool(true)},
+			lever{withShift: bool(true)},
+		},
 	},
 	wheels: []wheel{
 		wheel{size: float64(70), cassette: (*cassette)(nil)},
-		wheel{size: float64(70), cassette: *cassette{wheels: int(11), chain: *chain{}}},
+		wheel{
+			size: float64(70),
+			cassette: *cassette{wheels: int(11), chain: *chain{}},
+		},
 	},
-	handlebar: handlebar{levers: []*lever{*lever{withShift: bool(true)}, *lever{withShift: bool(true)}}},
+	handlebar: handlebar{
+		levers: []*lever{
+			*lever{withShift: bool(true)},
+			*lever{withShift: bool(true)},
+		},
+	},
 	saddle: saddle{},
 }
 ```
@@ -172,28 +214,28 @@ input objects.
 ##### Numbers
 
 Numbers are printed based on the `fmt` package's default formatting. When printing with moderate type
-information, the type for the `int`, default witdth signed integers, will be omitted.
+information, the type for the `int`, default width signed integers, will be omitted.
 
-```go
+```
 i := 42
 notation.Printlnt(i)
 ```
 
 Output:
 
-```go
+```
 42
 ```
 
 ##### Strings
 
 When printing strings, by default they are escaped using the `strconv.Quote` function. However, when wrapping
-long strings, and the string contains a newline and doesn't contain a backquote '`', then the string is printed
-as a raw string literal, delimited by '`'.
+long strings, and the string contains a newline and doesn't contain a backquote, then the string is printed
+as a raw string literal, delimited by backquotes.
 
 Short string:
 
-```go
+```
 s := `foobar
 baz`
 notation.Printlnw(s)
@@ -201,13 +243,13 @@ notation.Printlnw(s)
 
 Output:
 
-```go
+```
 "foobar\nbaz"
 ```
 
 Long string:
 
-```go
+```
 s := `The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The
 quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown
 fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps
@@ -220,7 +262,7 @@ notation.Println(s)
 
 Output:
 
-```go
+```
 `The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The
 quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown
 fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps
@@ -234,28 +276,28 @@ quick brown fox jumps over the lazy dog.`
 Slices are are printed by printing their elements between braces, prefixed either by '[]' or the type of the
 slice. Example:
 
-```go
+```
 l := []int{1, 2, 3}
 notation.Println(l)
 ```
 
 Output:
 
-```go
+```
 []{1, 2, 3}
 ```
 
 To differentiate arrays from slices, arrays are always prefixed with their type or square brackets containing
 the length of the array:
 
-```go
+```
 a := [...]{1, 2, 3}
 notation.Println(a)
 ```
 
 Output:
 
-```go
+```
 [3]{1, 2, 3}
 ```
 
@@ -264,9 +306,9 @@ Output:
 When the type of a slice is `uint8`, or an alias of it, e.g. `byte`, then it is printed as []byte, with the hexa
 representation of its bytes:
 
-```go
+```
 b := []byte(
-`The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The
+	`The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The
 quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown
 fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps
 over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy
@@ -279,7 +321,7 @@ notation.Printlnwt(b)
 
 Output:
 
-```go
+```
 []byte{
 	54 68 65 20 71 75 69 63 6b 20 62 72 6f 77 6e 20 66 6f 78 20 6a
 	75 6d 70 73 20 6f 76 65 72 20 74 68 65 20 6c 61 7a 79 20 64 6f
@@ -314,14 +356,14 @@ Output:
 
 Maps are printed with their entries sorted by the string representation of their keys:
 
-```go
+```
 m := map[string]int{"b": 1, "c": 2, "a": 3}
 notation.Println(m)
 ```
 
 Output:
 
-```go
+```
 map{"a": 3, "b": 1, "c": 2}
 ```
 
@@ -330,42 +372,42 @@ disabled via the `MAPSORT=0` environment variable.
 
 ##### Hidden values: channels, functions
 
-Certain values, like channels and functions are printed without expanding their internals, e.g. channee state or
+Certain values, like channels and functions are printed without expanding their internals, e.g. channel state or
 function body. When printing with types, the signature of these objects is printed:
 
-```go
+```
 f := func(int) int { return 42 }
 notation.Println(f)
 ```
 
 Output:
 
-```go
+```
 func()
 ```
 
 With types:
 
-```go
+```
 f := func(int) int { return 42 }
 notation.Printlnt(f)
 ```
 
 Output:
 
-```go
+```
 func(int) int
 ```
 
 ##### Wrapping
 
-Whe 'w' variant of the printing functions wraps the output with Go style indentation where the lines would be
+The 'w' variant of the printing functions wraps the output with Go style indentation where the lines would be
 too long otherwise. The wrapping is not eager, it only aims for fitting the lines on 72 columns. To measure the
 indentation, it assumes 8 character width tabs. In certain cases, it tolerates longer lines up to 112 columns,
 when the output would probably more readable that way. Of course, readability is subjective.
 
 As a hidden feature, when it's really necessary, it is possible to change the above control values via
-environmetn variables. TABWIDTH controls the measuring of the indentation. LINEWIDTH sets the aimed column width
+environment variables. TABWIDTH controls the measuring of the indentation. LINEWIDTH sets the aimed column width
 of the printed lines. LINEWIDTH1 sets the tolerated threshold for those lines that are allowed to exceed the
 default line width. E.g. if somebody uses two-character wide tabs in their console, they can use the package
 like this:
@@ -374,7 +416,7 @@ like this:
 TABWIDTH=2 go test -v -count 1
 ```
 
-As a consequence, it is also possible to wrap all lines:
+As a consequence, it is also possible to forcibly wrap all lines:
 
 ```
 TABWIDTH=0 LINEWIDTH=0 LINEWIDTH1=0 go test -v -count 1
@@ -388,7 +430,7 @@ type. The package path is not printed.
 
 Named type:
 
-```go
+```
 type t struct{foo int}
 v := t{42}
 notation.Printlnt(v)
@@ -396,43 +438,43 @@ notation.Printlnt(v)
 
 Output:
 
-```go
+```
 t{foo: 42}
 ```
 
 Unnamed type:
 
-```go
+```
 v := struct{foo int}{42}
 notation.Printlnt(v)
 ```
 
 Output:
 
-```go
+```
 struct{foo int}{foo: 42}
 ```
 
 Using the 't' suffixed variants of the printing functions, displaying only moderately verbose type information,
 the types of certain values is omitted, where it can be inferred from the context:
 
-```go
+```
 v := []struct{foo int}{{42}, {84}}
 notation.Printlnt(os.Stdout, v)
 ```
 
 Output:
 
-```go
+```
 []struct{foo int}{{foo: 42}, {foo: 84}}
 ```
 
 ##### Cyclic references
 
 Cyclic references are detected based on an approach similar to the one in the stdlib's reflect.DeepEqual
-function. Such occurences are displayed in the output with references:
+function. Such occurrences are displayed in the output with references:
 
-```go
+```
 l := []interface{}{"foo"}
 l[0] = l
 notation.Fprint(os.Stdout, l)
@@ -440,6 +482,7 @@ notation.Fprint(os.Stdout, l)
 
 Output:
 
-```go
+```
 r0=[]{r0}
 ```
+

@@ -973,7 +973,7 @@ func TestLongNonWrapperNodes(t *testing.T) {
 	}
 }
 
-func TestSingleLongString(t *testing.T) {
+func TestLongString(t *testing.T) {
 	t.Run("no line breaks", func(t *testing.T) {
 		const expect = `"foobarbazquxquuxquzquuz"`
 		defer withEnv(t, "TABWIDTH=2", "LINEWIDTH=9", "LINEWIDTH1=12")()
@@ -1034,7 +1034,11 @@ func TestCyclicReferences(t *testing.T) {
 	})
 
 	t.Run("multiple refs", func(t *testing.T) {
-		const expect = `{f0: r1={f0: r2={f0: nil, f1: r1, f2: r2}, f1: nil, f2: nil}, f1: nil, f2: nil}`
+		const expect = `{
+	f0: r1={f0: r2={f0: nil, f1: r1, f2: r2}, f1: nil, f2: nil},
+	f1: nil,
+	f2: nil,
+}`
 		type typ struct{ f0, f1, f2 *typ }
 		v0 := new(typ)
 		v1 := new(typ)

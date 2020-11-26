@@ -1,5 +1,5 @@
 /*
-Package notation can be used to print (or sprint) Go objects with optional wrapping (pretty printing) and
+Package notation can be used to print (or sprint) Go objects with optional wrapping (and indentation) and
 optional type information.
 */
 package notation
@@ -40,18 +40,18 @@ type pending struct {
 }
 
 type node struct {
+	parts    []interface{}
 	len      int
 	wrapLen  wrapLen
 	fullWrap wrapLen
 	wrap     bool
-	parts    []interface{}
 }
 
 type str struct {
 	val    string
 	raw    string
-	useRaw bool
 	rawLen wrapLen
+	useRaw bool
 }
 
 type wrapMode int
@@ -76,6 +76,11 @@ type writer struct {
 
 var stderr io.Writer = os.Stderr
 
+func nodeOf(parts ...interface{}) node {
+	return node{parts: parts}
+}
+
+// used only for debugging
 func (n node) String() string {
 	var b bytes.Buffer
 	w := &writer{w: &b}
@@ -114,10 +119,6 @@ func (w *writer) tabs(n int) {
 func (w *writer) line(t int) {
 	w.blankLine()
 	w.tabs(t)
-}
-
-func nodeOf(parts ...interface{}) node {
-	return node{parts: parts}
 }
 
 func config(name string, dflt int) int {
@@ -166,12 +167,8 @@ func fprintValues(w io.Writer, o opts, v []interface{}) (int, error) {
 			continue
 		}
 
-		n := reflectValue(
-			o,
-			&pending{values: make(map[uintptr]nodeRef)},
-			reflect.ValueOf(vi),
-		)
-
+		p := &pending{values: make(map[uintptr]nodeRef)}
+		n := reflectValue(o, p, reflect.ValueOf(vi))
 		if o&wrap != 0 {
 			n = nodeLen(tab, n)
 			n = wrapNode(tab, cols0, cols0, cols1, n)
@@ -209,7 +206,7 @@ func Fprint(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, none, v)
 }
 
-// Fprintw prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary.
+// Fprintw prints the provided objects to the provided writer, with wrapping (and indentation) where necessary.
 // When multiple objects are printed, they'll be separated by a newline.
 func Fprintw(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap, v)
@@ -221,7 +218,7 @@ func Fprintt(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, types, v)
 }
 
-// Fprintwt prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary,
+// Fprintwt prints the provided objects to the provided writer, with wrapping (and indentation) where necessary,
 // and with moderate type information. When multiple objects are printed, they'll be separated by a newline.
 func Fprintwt(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap|types, v)
@@ -233,7 +230,7 @@ func Fprintv(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, allTypes, v)
 }
 
-// Fprintwv prints the provided objects to the provided writer, with wrapping (pretty-printing) where necessary,
+// Fprintwv prints the provided objects to the provided writer, with wrapping (and indentation) where necessary,
 // and with verbose type information. When multiple objects are printed, they'll be separated by a newline.
 func Fprintwv(w io.Writer, v ...interface{}) (int, error) {
 	return fprintValues(w, wrap|allTypes, v)
@@ -245,7 +242,7 @@ func Print(v ...interface{}) (int, error) {
 	return printValues(none, v)
 }
 
-// Printw prints the provided objects to stderr, with wrapping (pretty-printing) where necessary. When multiple
+// Printw prints the provided objects to stderr, with wrapping (and indentation) where necessary. When multiple
 // objects are printed, they'll be separated by a newline.
 func Printw(v ...interface{}) (int, error) {
 	return printValues(wrap, v)
@@ -257,7 +254,7 @@ func Printt(v ...interface{}) (int, error) {
 	return printValues(types, v)
 }
 
-// Printwt prints the provided objects to stderr, with wrapping (pretty-printing) where necessary, and with
+// Printwt prints the provided objects to stderr, with wrapping (and indentation) where necessary, and with
 // moderate type information. When multiple objects are printed, they'll be separated by a newline.
 func Printwt(v ...interface{}) (int, error) {
 	return printValues(wrap|types, v)
@@ -269,7 +266,7 @@ func Printv(v ...interface{}) (int, error) {
 	return printValues(allTypes, v)
 }
 
-// Printwv prints the provided objects to stderr, with wrapping (pretty-printing) where necessary, and with
+// Printwv prints the provided objects to stderr, with wrapping (and indentation) where necessary, and with
 // verbose type information. When multiple objects are printed, they'll be separated by a newline.
 func Printwv(v ...interface{}) (int, error) {
 	return printValues(wrap|allTypes, v)
@@ -281,7 +278,7 @@ func Println(v ...interface{}) (int, error) {
 	return printlnValues(none, v)
 }
 
-// Printlnw prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// Printlnw prints the provided objects to stderr with a closing newline, with wrapping (and indentation) where
 // necessary. When multiple objects are printed, they'll be separated by a newline.
 func Printlnw(v ...interface{}) (int, error) {
 	return printlnValues(wrap, v)
@@ -293,7 +290,7 @@ func Printlnt(v ...interface{}) (int, error) {
 	return printlnValues(types, v)
 }
 
-// Printlnwt prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// Printlnwt prints the provided objects to stderr with a closing newline, with wrapping (and indentation) where
 // necessary, and with moderate type information. When multiple objects are printed, they'll be separated by a
 // newline.
 func Printlnwt(v ...interface{}) (int, error) {
@@ -306,7 +303,7 @@ func Printlnv(v ...interface{}) (int, error) {
 	return printlnValues(allTypes, v)
 }
 
-// Printlnwv prints the provided objects to stderr with a closing newline, with wrapping (pretty-printing) where
+// Printlnwv prints the provided objects to stderr with a closing newline, with wrapping (and indentation) where
 // necessary, and with verbose type information. When multiple objects are printed, they'll be separated by a
 // newline.
 func Printlnwv(v ...interface{}) (int, error) {
@@ -319,7 +316,7 @@ func Sprint(v ...interface{}) string {
 	return sprintValues(none, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary.
+// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary.
 // When multiple objects are provided, they'll be seprated by a newline.
 func Sprintw(v ...interface{}) string {
 	return sprintValues(wrap, v)
@@ -331,7 +328,7 @@ func Sprintt(v ...interface{}) string {
 	return sprintValues(types, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary,
+// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
 // and with moderate type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwt(v ...interface{}) string {
 	return sprintValues(wrap|types, v)
@@ -343,7 +340,7 @@ func Sprintv(v ...interface{}) string {
 	return sprintValues(allTypes, v)
 }
 
-// Sprint returns the string representation of the Go objects, with wrapping (pretty-printing) where necessary,
+// Sprint returns the string representation of the Go objects, with wrapping (and indentation) where necessary,
 // and with verbose type information. When multiple objects are provided, they'll be seprated by a newline.
 func Sprintwv(v ...interface{}) string {
 	return sprintValues(wrap|allTypes, v)
