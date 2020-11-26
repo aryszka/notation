@@ -1,0 +1,13 @@
+on:
+  push:
+    branches: [master]
+jobs:
+  cover:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v2
+    - run: make cover
+    - uses: codecov/codecov-action@v1
+      with:
+        file: .coverprofile
