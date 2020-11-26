@@ -25,3 +25,5 @@ showcover: .coverprofile
 
 check-fmt:
 	@! ( gofmt -s -l . | grep . )
+
+ci-check: check-fmt check
