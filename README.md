@@ -1,5 +1,7 @@
 # Notation - print Go objects
 
+[![codecov](https://codecov.io/gh/aryszka/notation/branch/master/graph/badge.svg?token=7M18MEAVQW)](https://codecov.io/gh/aryszka/notation)
+
 This package can be used to print (or sprint) Go objects for debugging purposes, with optional wrapping
 (indentation) and optional type information.
 
