@@ -66,7 +66,7 @@ b := bike{
 		chain:         chain{},
 		levers:        []lever{{true}, {true}},
 	},
-	wheels:    []wheel{{size: 70}, {size: 70}},
+	wheels:    []wheel{{size: 700}, {size: 700}},
 	handlebar: handlebar{},
 	saddle:    saddle{},
 }
@@ -95,7 +95,7 @@ We get the following string:
 {
 	frame: {
 		fork: {
-			wheel: {size: 70, cassette: nil},
+			wheel: {size: 700, cassette: nil},
 			handlebar: {
 				levers: []{
 					{withShift: true},
@@ -109,7 +109,10 @@ We get the following string:
 		frontDerailleur: {gears: 2},
 		rearDerailleur: {gears: 11},
 		rearBrake: {discSize: 140},
-		rearWheel: {size: 70, cassette: {wheels: 11, chain: {}}},
+		rearWheel: {
+			size: 700,
+			cassette: {wheels: 11, chain: {}},
+		},
 	},
 	driveTrain: {
 		bottomBracket: {crank: {wheels: 2, chain: {}}},
@@ -121,8 +124,8 @@ We get the following string:
 		levers: []{{withShift: true}, {withShift: true}},
 	},
 	wheels: []{
-		{size: 70, cassette: nil},
-		{size: 70, cassette: {wheels: 11, chain: {}}},
+		{size: 700, cassette: nil},
+		{size: 700, cassette: {wheels: 11, chain: {}}},
 	},
 	handlebar: {levers: []{{withShift: true}, {withShift: true}}},
 	saddle: {},
@@ -136,7 +139,7 @@ bike{
 	frame: frame{
 		fork: fork{
 			wheel: *wheel{
-				size: float64(70),
+				size: float64(700),
 				cassette: (*cassette)(nil),
 			},
 			handlebar: *handlebar{
@@ -158,7 +161,7 @@ bike{
 		rearDerailleur: *derailleur{gears: int(11)},
 		rearBrake: *brake{discSize: float64(140)},
 		rearWheel: *wheel{
-			size: float64(70),
+			size: float64(700),
 			cassette: *cassette{
 				wheels: int(11),
 				chain: *chain{},
@@ -193,9 +196,9 @@ bike{
 		},
 	},
 	wheels: []wheel{
-		wheel{size: float64(70), cassette: (*cassette)(nil)},
+		wheel{size: float64(700), cassette: (*cassette)(nil)},
 		wheel{
-			size: float64(70),
+			size: float64(700),
 			cassette: *cassette{wheels: int(11), chain: *chain{}},
 		},
 	},

@@ -72,7 +72,7 @@ func Example() {
 			chain:         chain{},
 			levers:        []lever{{true}, {true}},
 		},
-		wheels:    []wheel{{size: 70}, {size: 70}},
+		wheels:    []wheel{{size: 700}, {size: 700}},
 		handlebar: handlebar{},
 		saddle:    saddle{},
 	}
@@ -99,7 +99,7 @@ func Example() {
 	// {
 	// 	frame: {
 	// 		fork: {
-	// 			wheel: {size: 70, cassette: nil},
+	// 			wheel: {size: 700, cassette: nil},
 	// 			handlebar: {
 	// 				levers: []{
 	// 					{withShift: true},
@@ -113,7 +113,10 @@ func Example() {
 	// 		frontDerailleur: {gears: 2},
 	// 		rearDerailleur: {gears: 11},
 	// 		rearBrake: {discSize: 140},
-	// 		rearWheel: {size: 70, cassette: {wheels: 11, chain: {}}},
+	// 		rearWheel: {
+	// 			size: 700,
+	// 			cassette: {wheels: 11, chain: {}},
+	// 		},
 	// 	},
 	// 	driveTrain: {
 	// 		bottomBracket: {crank: {wheels: 2, chain: {}}},
@@ -125,8 +128,8 @@ func Example() {
 	// 		levers: []{{withShift: true}, {withShift: true}},
 	// 	},
 	// 	wheels: []{
-	// 		{size: 70, cassette: nil},
-	// 		{size: 70, cassette: {wheels: 11, chain: {}}},
+	// 		{size: 700, cassette: nil},
+	// 		{size: 700, cassette: {wheels: 11, chain: {}}},
 	// 	},
 	// 	handlebar: {levers: []{{withShift: true}, {withShift: true}}},
 	// 	saddle: {},
