@@ -144,7 +144,7 @@ func reflectMap(o opts, p *pending, r reflect.Value) node {
 	sn := make(map[string]node)
 	for _, key := range r.MapKeys() {
 		kn := reflectValue(itemOpts, p, key)
-		knExt := reflectValue(allTypes|pointerValues, p, key)
+		knExt := reflectValue(itemOpts|_pointerValues, p, key)
 		var b bytes.Buffer
 		wr := writer{w: &b}
 		fprint(&wr, 0, knExt)
@@ -180,15 +180,15 @@ func reflectPointer(o opts, p *pending, r reflect.Value) node {
 	}
 
 	e := reflectValue(o, p, r.Elem())
+	if o & _pointerValues != 0 {
+		e = nodeOf(e, "_", r.Pointer())
+	}
+
 	if _, t, _ := withType(o); !t {
 		return e
 	}
 
-	if o&pointerValues == 0 {
-		return nodeOf("*", e)
-	}
-
-	return nodeOf("*(", r.Pointer(), ")", e)
+	return nodeOf("*", e)
 }
 
 func reflectList(o opts, p *pending, r reflect.Value) node {
