@@ -281,10 +281,11 @@ func checkPending(p *pending, r reflect.Value) (applyRef func(node) node, ref no
 	applyRef = func(n node) node {
 		nr = p.values[key]
 		if nr.refCount > 0 {
-			n.parts = append(
-				[]interface{}{"r", nr.id, "="},
-				n.parts...,
-			)
+			def := []interface{}{"r", nr.id, "="}
+			pp := make([]interface{}, len(def)+len(n.parts))
+			copy(pp, def)
+			copy(pp[len(def):], n.parts)
+			n.parts = pp
 		}
 
 		delete(p.values, key)
