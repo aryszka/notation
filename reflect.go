@@ -180,7 +180,7 @@ func reflectPointer(o opts, p *pending, r reflect.Value) node {
 	}
 
 	e := reflectValue(o, p, r.Elem())
-	if o & _pointerValues != 0 {
+	if o&_pointerValues != 0 {
 		e = nodeOf(e, "_", r.Pointer())
 	}
 
