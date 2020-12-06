@@ -24,6 +24,7 @@ const (
 	skipTypes
 	allTypes
 	randomMaps
+	pointerValues
 )
 
 type wrapLen struct {
