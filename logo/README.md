@@ -1,4 +1,4 @@
-# The Forget logo
+# Notation logo
  
 <img src="logo.png" alt="forget" width="450" height="95">
 
